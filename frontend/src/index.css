@@ -1,0 +1,306 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 48 38% 97%;
+    --foreground: 146 24% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 146 24% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 146 24% 10%;
+
+    --primary: 160 58% 22%;
+    --primary-foreground: 48 38% 97%;
+
+    --secondary: 136 26% 92%;
+    --secondary-foreground: 146 24% 10%;
+
+    --muted: 136 24% 91%;
+    --muted-foreground: 145 8% 41%;
+
+    --accent: 42 44% 48%;
+    --accent-foreground: 48 38% 97%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 128 20% 83%;
+    --input: 128 18% 86%;
+    --ring: 160 58% 24%;
+
+    --radius: 0.875rem;
+
+    /* Luxury color tokens */
+    --gold: 160 58% 22%;
+    --gold-light: 42 44% 55%;
+    --gold-dark: 160 67% 14%;
+    --luxury-black: 146 24% 10%;
+    --luxury-gray: 136 24% 91%;
+
+    /* Gold/amber accent for highlights */
+    --amber: 42 72% 56%;
+    --amber-light: 42 80% 70%;
+
+    /* Gradients */
+    --gradient-gold: linear-gradient(135deg, hsl(160 58% 22%), hsl(42 44% 55%));
+    --gradient-gold-dark: linear-gradient(135deg, hsl(160 67% 14%), hsl(160 58% 22%));
+    --gradient-luxury: linear-gradient(180deg, hsl(0 0% 100%), hsl(48 38% 97%));
+    --gradient-amber: linear-gradient(135deg, hsl(42 72% 56%), hsl(38 85% 68%));
+
+    /* Shadows — elevated but not heavy */
+    --shadow-soft: 0 4px 24px hsl(220 24% 15% / 0.06);
+    --shadow-gold: 0 12px 40px hsl(220 24% 15% / 0.08);
+    --shadow-gold-intense: 0 20px 60px hsl(220 24% 15% / 0.12);
+    --shadow-card: 0 2px 16px hsl(146 24% 10% / 0.05), 0 8px 32px hsl(146 24% 10% / 0.04);
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 146 24% 10%;
+    --sidebar-primary: 160 58% 22%;
+    --sidebar-primary-foreground: 48 38% 97%;
+    --sidebar-accent: 136 26% 92%;
+    --sidebar-accent-foreground: 146 24% 10%;
+    --sidebar-border: 128 20% 83%;
+    --sidebar-ring: 160 58% 24%;
+  }
+
+  .dark {
+    --background: 48 38% 97%;
+    --foreground: 146 24% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 146 24% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 146 24% 10%;
+    --primary: 160 58% 22%;
+    --primary-foreground: 48 38% 97%;
+    --secondary: 136 26% 92%;
+    --secondary-foreground: 146 24% 10%;
+    --muted: 136 24% 91%;
+    --muted-foreground: 145 8% 41%;
+    --accent: 42 44% 48%;
+    --accent-foreground: 48 38% 97%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 128 20% 83%;
+    --input: 128 18% 86%;
+    --ring: 160 58% 24%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased overflow-x-hidden;
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    letter-spacing: -0.01em;
+    background-image:
+      linear-gradient(180deg, hsl(0 0% 100% / 0.88), hsl(48 38% 97% / 0.95)),
+      linear-gradient(135deg, hsl(160 58% 22% / 0.04), transparent 42%, hsl(42 44% 55% / 0.07));
+    max-width: 100vw;
+  }
+
+  html {
+    @apply overflow-x-hidden;
+    max-width: 100vw;
+    scroll-behavior: smooth;
+  }
+
+  /* Headings use clean modern sans matching hero section font-medium */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', system-ui, sans-serif;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  /* Tighter tracking for display sizes */
+  h1 { letter-spacing: -0.03em; }
+  h2 { letter-spacing: -0.025em; }
+}
+
+@layer components {
+
+  /* ─── Eyebrow / label text ─── */
+  .eyebrow {
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: hsl(var(--gold-light));
+  }
+
+  /* ─── Gradient text ─── */
+  .gold-text {
+    @apply text-transparent bg-clip-text;
+    background-image: var(--gradient-gold);
+  }
+
+  .amber-text {
+    @apply text-transparent bg-clip-text;
+    background-image: var(--gradient-amber);
+  }
+
+  /* ─── Borders ─── */
+  .gold-border {
+    border-image: var(--gradient-gold) 1;
+  }
+
+  /* ─── Cards ─── */
+  .luxury-card {
+    @apply bg-card border border-border/40 rounded-2xl;
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+  }
+
+  .luxury-card:hover {
+    box-shadow: var(--shadow-gold);
+    transform: translateY(-2px);
+  }
+
+  /* ─── Buttons ─── */
+  .luxury-button {
+    @apply relative overflow-hidden transition-all duration-300;
+    background: linear-gradient(135deg, hsl(160 58% 22%), hsl(160 48% 28%));
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .luxury-button::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: var(--gradient-gold-dark);
+  }
+
+  .luxury-button:hover::before {
+    @apply opacity-100;
+  }
+
+  /* ─── Navbar glass ─── */
+  .glass-effect {
+    background: hsl(0 0% 100% / 0.82);
+    backdrop-filter: blur(20px) saturate(1.6);
+    -webkit-backdrop-filter: blur(20px) saturate(1.6);
+    border-bottom: 1px solid hsl(128 20% 83% / 0.5);
+    box-shadow: 0 1px 20px hsl(146 24% 10% / 0.05);
+  }
+
+  /* ─── Section dividers ─── */
+  .section-divider {
+    width: 48px;
+    height: 1px;
+    background: var(--gradient-amber);
+    margin: 1rem auto 0;
+  }
+
+  /* ─── Pill badge ─── */
+  .luxury-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 9999px;
+    border: 1px solid hsl(128 20% 83% / 0.8);
+    background: hsl(0 0% 100% / 0.85);
+    backdrop-filter: blur(10px);
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: hsl(160 67% 14%);
+    box-shadow: 0 2px 12px hsl(146 24% 10% / 0.06);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Font utility classes */
+  .font-cormorant { font-family: 'Poppins', sans-serif; }
+  .font-dm { font-family: 'Poppins', sans-serif; }
+  .font-poppins { font-family: 'Poppins', sans-serif; }
+
+  /* Refined tracking */
+  .tracking-luxury { letter-spacing: 0.18em; }
+  .tracking-editorial { letter-spacing: -0.03em; }
+
+  /* Animations */
+  .animate-float {
+    animation: float 7s ease-in-out infinite;
+  }
+
+  .animate-glow {
+    animation: glow 3s ease-in-out infinite alternate;
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2.4s linear infinite;
+  }
+
+  .animate-fade-up {
+    animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  /* Scrollbar */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Print-only */
+  .print-only-summary { display: none; }
+}
+
+/* ─── Keyframes ─── */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-16px); }
+}
+
+@keyframes glow {
+  from { box-shadow: 0 0 18px hsl(160 58% 22% / 0.14); }
+  to { box-shadow: 0 0 36px hsl(42 44% 55% / 0.20); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Landing display type: modern, clean sans on the landing page */
+.landing-display h1,
+.landing-display h2,
+.landing-display h3,
+.landing-display h4 {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
