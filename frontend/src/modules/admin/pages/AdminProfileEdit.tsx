@@ -210,41 +210,39 @@ const AdminProfileEdit = () => {
 
     return (
         <AdminLayout>
-            <main className="max-w-7xl mx-auto space-y-8 pb-32">
+            <main className="max-w-7xl mx-auto space-y-6 pb-32">
                 {/* Header & Back Button Row */}
-                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-                    <div className="space-y-2">
-                        <div className="inline-flex items-center px-2 py-0.5 rounded-md bg-gold/10 border border-gold/20 text-gold text-[9px] font-semibold tracking-[0.15em] uppercase">
-                            Admin Editor
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200/80">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-2xl font-semibold text-[#10243e] tracking-tight">Health Profile Editor</h1>
+                            <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-md bg-orange-50 text-orange-700 border border-orange-200/80">
+                                Detailed Editor
+                            </span>
                         </div>
-                        <h1 className="text-2xl md:text-3xl font-bold text-foreground leading-snug">
-                            Health <span className="text-gold">Profile</span> Editor
-                        </h1>
-                        <p className="max-w-sm text-muted-foreground text-xs leading-relaxed">
-                            Complete health profile editing for user <span className="text-gold">{id}</span>. All fields are fully editable.
+                        <p className="text-xs text-slate-500 mt-0.5">
+                            Editing complete biometrics, fitness targets & dietary parameters for user <span className="font-mono font-medium text-orange-600">#{id}</span>
                         </p>
                     </div>
 
-                    <Button
-                        variant="ghost"
+                    <button
                         onClick={() => navigate("/admin/user-profiles")}
-                        className="text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-10 px-4 mb-1"
+                        className="h-9 px-3.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 shadow-xs transition-all flex items-center cursor-pointer self-start sm:self-auto"
                     >
-                        <ArrowLeft className="mr-2 h-4 w-4" /> Back to User Profiles
-                    </Button>
+                        <ArrowLeft className="mr-2 h-4 w-4 text-orange-500" /> Back to User Profiles
+                    </button>
                 </div>
 
-
                 {/* Section Navigation */}
-                <div className="flex flex-wrap gap-2">
+                <div className="bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/80 flex flex-wrap gap-1.5">
                     {sections.map((s) => (
                         <button
                             key={s.id}
                             onClick={() => setActiveSection(s.id)}
-                            className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
+                            className={`px-4 py-2 rounded-xl text-xs font-medium uppercase tracking-wider transition-all cursor-pointer ${
                                 activeSection === s.id
-                                    ? "bg-gold/10 text-gold border border-gold/20"
-                                    : "bg-card text-muted-foreground border border-border/60 hover:text-foreground hover:border-border/70"
+                                    ? "bg-white text-orange-600 shadow-xs border border-slate-200/80"
+                                    : "text-slate-600 hover:text-slate-900"
                             }`}
                         >
                             {s.label}
@@ -252,7 +250,7 @@ const AdminProfileEdit = () => {
                     ))}
                 </div>
 
-                <Card className="bg-card border border-border/60 rounded-2xl">
+                <div className="bg-gradient-to-b from-white via-[#fcfdff] to-[#f8fbff] border border-slate-200/90 rounded-2xl shadow-[0_2.5px_6px_rgba(0,0,0,0.03),inset_0_1px_0_rgba(255,255,255,1)]">
                     {/* Section: Basic Info */}
                     {activeSection === "basic" && (
                         <CardContent className="p-6 md:p-8 space-y-8">
@@ -1297,28 +1295,31 @@ const AdminProfileEdit = () => {
                             </div>
                         </CardContent>
                     )}
-                </Card>
+                </div>
 
                 {/* Save Button */}
                 <div className="flex gap-4">
-                    <Button variant="outline" size="lg" className="flex-1 border-border/70 hover:bg-secondary/50" onClick={() => navigate("/admin/user-profiles")}>
-                        <ArrowLeft className="mr-2 h-5 w-5" /> Back to User Profiles
-                    </Button>
-                    <Button
-                        variant="luxury"
-                        size="lg"
-                        className="flex-1"
+                    <button 
+                        type="button" 
+                        onClick={() => navigate("/admin/user-profiles")}
+                        className="flex-1 h-11 px-6 font-bold text-xs uppercase tracking-wider text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all flex items-center justify-center cursor-pointer shadow-sm"
+                    >
+                        <ArrowLeft className="mr-2 h-4 w-4 text-slate-500" /> Back to User Profiles
+                    </button>
+                    <button
+                        type="button"
                         onClick={handleSave}
                         disabled={isSaving}
+                        className="flex-1 h-11 px-6 font-bold text-xs uppercase tracking-wider text-white bg-gradient-to-b from-[#ff8736] via-[#f97316] to-[#dc5c09] rounded-xl shadow-[0_2.5px_6px_rgba(249,115,22,0.4),inset_0_1.5px_1px_rgba(255,255,255,0.65)] hover:brightness-105 active:scale-95 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
                     >
                         {isSaving ? (
                             "Saving..."
                         ) : (
                             <>
-                                <Save className="mr-2 h-5 w-5" /> Save Health Metrics
+                                <Save className="mr-2 h-4 w-4" /> Save Health Metrics
                             </>
                         )}
-                    </Button>
+                    </button>
                 </div>
             </main>
         </AdminLayout>

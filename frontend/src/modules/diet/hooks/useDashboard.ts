@@ -92,7 +92,7 @@ export const useDashboard = () => {
     dashboardCache?.dayPlans || buildDaySchedule([], null, getCachedUser()?.name || "User")
   );
   const [selectedDay, setSelectedDay] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !(dashboardCache?.dayPlans && getCachedUser()));
   const [isGenerating, setIsGenerating] = useState(false);
   const [showCheckinModal, setShowCheckinModal] = useState(false);
   const [checkinData, setCheckinData] = useState<CheckinData>({

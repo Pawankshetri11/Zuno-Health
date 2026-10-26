@@ -24,43 +24,53 @@ if (!$user || $user['is_admin'] != 1) {
 if ($method === 'GET') {
     try {
         // --- BASIC STATS ---
-        $totalUsers = $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
+        $totalUsers    = $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
         $totalProfiles = $pdo->query("SELECT COUNT(*) FROM profiles")->fetchColumn();
-        
+
         // --- FINANCIAL STATS ---
-        $totalRevenue = (float)($pdo->query("SELECT COALESCE(SUM(amount), 0) FROM subscriptions WHERE payment_status IN ('completed', 'SUCCESS')")->fetchColumn() ?: 0);
-        $pendingPaymentsCount = (int)$pdo->query("SELECT COUNT(*) FROM subscriptions WHERE payment_status = 'pending'")->fetchColumn();
-        
-        $revenueToday = (float)($pdo->query("SELECT COALESCE(SUM(amount), 0) FROM subscriptions WHERE payment_status IN ('completed', 'SUCCESS') AND DATE(start_date) = CURDATE()")->fetchColumn() ?: 0);
+        $totalRevenue = (float)($pdo->query(
+            "SELECT COALESCE(SUM(amount), 0) FROM subscriptions WHERE payment_status IN ('completed', 'SUCCESS')"
+        )->fetchColumn() ?: 0);
 
-        $activeSubscriptions = (int)$pdo->query("SELECT COUNT(*) FROM subscriptions WHERE payment_status IN ('completed', 'SUCCESS') AND end_date >= CURDATE()")->fetchColumn();
+        $pendingPaymentsCount = (int)$pdo->query(
+            "SELECT COUNT(*) FROM subscriptions WHERE payment_status = 'pending'"
+        )->fetchColumn();
 
-        // --- Monthly Recurring Revenue (Only for monthly duration plans) ---
-        // We define monthly plans as having plan_days >= 28 to exclude weekly/daily trials
+        $revenueToday = (float)($pdo->query(
+            "SELECT COALESCE(SUM(amount), 0) FROM subscriptions
+             WHERE payment_status IN ('completed', 'SUCCESS') AND DATE(start_date) = CURDATE()"
+        )->fetchColumn() ?: 0);
+
+        $activeSubscriptions = (int)$pdo->query(
+            "SELECT COUNT(*) FROM subscriptions
+             WHERE payment_status IN ('completed', 'SUCCESS') AND end_date >= CURDATE()"
+        )->fetchColumn();
+
+        // --- Monthly Recurring Revenue (plan_days >= 28 = monthly plans only) ---
         $mrr = (float)($pdo->query("
-            SELECT COALESCE(SUM(amount), 0) 
-            FROM subscriptions 
-            WHERE payment_status IN ('completed', 'SUCCESS') 
-            AND plan_days >= 28 
-            AND end_date >= CURDATE()
+            SELECT COALESCE(SUM(amount), 0)
+            FROM subscriptions
+            WHERE payment_status IN ('completed', 'SUCCESS')
+              AND plan_days >= 28
+              AND end_date >= CURDATE()
         ")->fetchColumn() ?: 0);
 
-                
         // --- HISTORY & TRENDS ---
         $revenueHistory = $pdo->query("
-            SELECT DATE_FORMAT(start_date, '%b %Y') as month, SUM(amount) as revenue 
-            FROM subscriptions 
-            WHERE payment_status IN ('completed', 'SUCCESS') AND start_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-            GROUP BY month 
+            SELECT DATE_FORMAT(start_date, '%b %Y') as month, SUM(amount) as revenue
+            FROM subscriptions
+            WHERE payment_status IN ('completed', 'SUCCESS')
+              AND start_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+            GROUP BY month
             ORDER BY start_date ASC
         ")->fetchAll();
 
-        // --- RECENT ITEMS ---
+        // --- RECENT TRANSACTIONS ---
         $recentTransactions = $pdo->query("
-            SELECT s.*, u.name, u.email 
-            FROM subscriptions s 
-            JOIN users u ON s.user_id = u.id 
-            ORDER BY s.start_date DESC 
+            SELECT s.*, u.name, u.email
+            FROM subscriptions s
+            JOIN users u ON s.user_id = u.id
+            ORDER BY s.start_date DESC
             LIMIT 10
         ")->fetchAll();
 
@@ -76,28 +86,35 @@ if ($method === 'GET') {
         $revenueChart = $pdo->query("
             SELECT DATE(start_date) as date, SUM(amount) as amount
             FROM subscriptions
-            WHERE payment_status IN ('completed', 'SUCCESS') AND start_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            WHERE payment_status IN ('completed', 'SUCCESS')
+              AND start_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
             GROUP BY date
             ORDER BY date ASC
         ")->fetchAll();
 
+        $conversionRate = $totalProfiles > 0
+            ? round(($activeSubscriptions / $totalProfiles) * 100, 1)
+            : 0;
+
         echo json_encode([
             'stats' => [
-                'totalUsers' => (int)$totalUsers,
-                'totalProfiles' => (int)$totalProfiles,
-                'totalRevenue' => $totalRevenue,
-                'mrr' => $mrr,
-                'pendingPayments' => (int)$pendingPaymentsCount,
-                'revenueToday' => $revenueToday,
-                'activeSubscriptions' => $activeSubscriptions,
-                'totalReferralPayout' => $totalReferralEarned,
-                'pendingWithdrawalsCount' =>                 'conversionRate' => $totalProfiles > 0 ? round(($activeSubscriptions / $totalProfiles) * 100, 1) : 0
+                'totalUsers'              => (int)$totalUsers,
+                'totalProfiles'           => (int)$totalProfiles,
+                'totalRevenue'            => $totalRevenue,
+                'mrr'                     => $mrr,
+                'pendingPayments'         => (int)$pendingPaymentsCount,
+                'revenueToday'            => $revenueToday,
+                'activeSubscriptions'     => (int)$activeSubscriptions,
+                'pendingWithdrawalsCount' => 0,
+                'pendingWithdrawalsAmount'=> 0,
+                'conversionRate'          => $conversionRate,
             ],
             'recentTransactions' => $recentTransactions,
-            'growthChart' => $growthChart,
-            'revenueChart' => $revenueChart,
-            'revenueHistory' => $revenueHistory
+            'growthChart'        => $growthChart,
+            'revenueChart'       => $revenueChart,
+            'revenueHistory'     => $revenueHistory,
         ]);
+
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(['error' => $e->getMessage()]);

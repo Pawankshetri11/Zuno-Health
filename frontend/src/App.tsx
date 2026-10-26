@@ -1,43 +1,56 @@
 import { Toaster } from "@/components/ui/toaster";
-// Trigger HMR update
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import AOS from "aos";
 import "aos/dist/aos.css";
-import Index from "./pages/Index";
-import Dashboard from "./modules/user/pages/Dashboard";
-
-import NotFound from "./pages/NotFound";
-import AuthPage from "./pages/Auth";
-import About from "./pages/About";
-import Contact from "./pages/Contact";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { GOOGLE_CLIENT_ID } from "./lib/api";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import UniversalHeader from "@/components/UniversalHeader";
 import ProtectedAdminRoute from "./modules/admin/components/ProtectedAdminRoute";
-import AdminDashboard from "./modules/admin/pages/AdminDashboard";
-import AdminUsers from "./modules/admin/pages/AdminUsers";
-import AdminUserProfiles from "./modules/admin/pages/AdminUserProfiles";
-import AdminSettings from "./modules/admin/pages/AdminSettings";
-import AdminAuth from "./modules/admin/pages/AdminAuth";
-import AdminProfileEdit from "./modules/admin/pages/AdminProfileEdit";
-
-import Profile from "./modules/user/pages/Profile";
-import PaymentHistory from "./modules/user/pages/PaymentHistory";
-import HealthMetrics from "./modules/user/pages/HealthMetrics";
-import Pricing from "./pages/Pricing";
-import Checkout from "./modules/user/pages/Checkout";
-import ComingSoon from "./pages/ComingSoon";
-import AdminCoupons from "./modules/admin/pages/AdminCoupons";
-import AdminTransactions from "./modules/admin/pages/AdminTransactions";
 import { api, syncConfig, API_BASE_URL } from "./lib/api";
+
+// ─── Lazy-loaded pages ────────────────────────────────────────────────────────
+// Each page is split into its own JS chunk — the browser downloads only the
+// chunk it actually needs, instead of the entire bundle upfront.
+const Index           = lazy(() => import("./pages/Index"));
+const AuthPage        = lazy(() => import("./pages/Auth"));
+const About           = lazy(() => import("./pages/About"));
+const Contact         = lazy(() => import("./pages/Contact"));
+const PrivacyPolicy   = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService  = lazy(() => import("./pages/TermsOfService"));
+const Pricing         = lazy(() => import("./pages/Pricing"));
+const ComingSoon      = lazy(() => import("./pages/ComingSoon"));
+const NotFound        = lazy(() => import("./pages/NotFound"));
+
+// User pages
+const Dashboard       = lazy(() => import("./modules/user/pages/Dashboard"));
+const HealthMetrics   = lazy(() => import("./modules/user/pages/HealthMetrics"));
+const Profile         = lazy(() => import("./modules/user/pages/Profile"));
+const PaymentHistory  = lazy(() => import("./modules/user/pages/PaymentHistory"));
+const Checkout        = lazy(() => import("./modules/user/pages/Checkout"));
+
+// Admin pages
+const AdminAuth         = lazy(() => import("./modules/admin/pages/AdminAuth"));
+const AdminDashboard    = lazy(() => import("./modules/admin/pages/AdminDashboard"));
+const AdminUsers        = lazy(() => import("./modules/admin/pages/AdminUsers"));
+const AdminUserProfiles = lazy(() => import("./modules/admin/pages/AdminUserProfiles"));
+const AdminSettings     = lazy(() => import("./modules/admin/pages/AdminSettings"));
+const AdminCoupons      = lazy(() => import("./modules/admin/pages/AdminCoupons"));
+const AdminTransactions = lazy(() => import("./modules/admin/pages/AdminTransactions"));
+const AdminProfileEdit  = lazy(() => import("./modules/admin/pages/AdminProfileEdit"));
+
 const queryClient = new QueryClient();
+
+// Minimal full-screen spinner shown while a lazy chunk is loading
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 // Old /get-started links → redirect to /auth (logged-out) or /health-metrics (logged-in),
 // preserving the ?plan= query param.
@@ -97,7 +110,6 @@ const App = () => {
       easing: "ease-out-cubic",
     });
 
-
     // Fetch initial config
     const loadConfig = async () => {
       try {
@@ -130,35 +142,38 @@ const App = () => {
             <ScrollToTop />
             <WhatsAppButton />
             <UniversalHeader />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/get-started" element={<GetStartedRedirect />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/health-metrics" element={<HealthMetrics />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/payments" element={<PaymentHistory />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-              <Route path="/terms" element={<TermsOfService />} />
-              <Route path="/coming-soon" element={<ComingSoon />} />
-              
-              {/* Admin Routes */}
-              <Route path="/admin/auth" element={<AdminAuth />} />
-              <Route path="/admin" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
-              <Route path="/admin/users" element={<ProtectedAdminRoute><AdminUsers /></ProtectedAdminRoute>} />
-              <Route path="/admin/user-profiles" element={<ProtectedAdminRoute><AdminUserProfiles /></ProtectedAdminRoute>} />
-              <Route path="/admin/settings" element={<ProtectedAdminRoute><AdminSettings /></ProtectedAdminRoute>} />
-              <Route path="/admin/coupons" element={<ProtectedAdminRoute><AdminCoupons /></ProtectedAdminRoute>} />
-              <Route path="/admin/transactions" element={<ProtectedAdminRoute><AdminTransactions /></ProtectedAdminRoute>} />
-              <Route path="/admin/profile-edit/:id" element={<ProtectedAdminRoute><AdminProfileEdit /></ProtectedAdminRoute>} />
-              
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            {/* Suspense wraps all lazy routes — shows PageLoader while chunk downloads */}
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/get-started" element={<GetStartedRedirect />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/health-metrics" element={<HealthMetrics />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/payments" element={<PaymentHistory />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/coming-soon" element={<ComingSoon />} />
+
+                {/* Admin Routes */}
+                <Route path="/admin/auth" element={<AdminAuth />} />
+                <Route path="/admin" element={<ProtectedAdminRoute><AdminDashboard /></ProtectedAdminRoute>} />
+                <Route path="/admin/users" element={<ProtectedAdminRoute><AdminUsers /></ProtectedAdminRoute>} />
+                <Route path="/admin/user-profiles" element={<ProtectedAdminRoute><AdminUserProfiles /></ProtectedAdminRoute>} />
+                <Route path="/admin/settings" element={<ProtectedAdminRoute><AdminSettings /></ProtectedAdminRoute>} />
+                <Route path="/admin/coupons" element={<ProtectedAdminRoute><AdminCoupons /></ProtectedAdminRoute>} />
+                <Route path="/admin/transactions" element={<ProtectedAdminRoute><AdminTransactions /></ProtectedAdminRoute>} />
+                <Route path="/admin/profile-edit/:id" element={<ProtectedAdminRoute><AdminProfileEdit /></ProtectedAdminRoute>} />
+
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
           </BrowserRouter>
         </TooltipProvider>
       </QueryClientProvider>

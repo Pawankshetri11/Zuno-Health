@@ -5,19 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import {
-    Save, Settings2, IndianRupee, Zap, BellRing, RefreshCcw,
-    CreditCard, Key, Palette, FileText, Image as ImageIcon, Upload, Loader2, Timer, Smartphone
+    Save, IndianRupee, Zap, RefreshCcw,
+    Key, Palette, Image as ImageIcon, Loader2, Timer
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { getLogoUrl } from "@/lib/api";
 
 const AdminSettings = () => {
-    const [settings, setSettings] = useState<any>({});
-    const [loading, setLoading] = useState(true);
+    const [settings, setSettings] = useState<any>(() => {
+        try { return JSON.parse(sessionStorage.getItem("zuno_admin_settings") || "{}"); } catch { return {}; }
+    });
+    const [loading, setLoading] = useState(() => !sessionStorage.getItem("zuno_admin_settings"));
     const [saving, setSaving] = useState(false);
     const [activeTab, setActiveTab] = useState("general");
     const [logoPreviewLight, setLogoPreviewLight] = useState<string | null>(null);
@@ -30,6 +30,7 @@ const AdminSettings = () => {
             try {
                 const resSettings = await api.admin.getSettings(user.id);
                 setSettings(resSettings);
+                sessionStorage.setItem("zuno_admin_settings", JSON.stringify(resSettings));
                 if (resSettings.logo_light) setLogoPreviewLight(getLogoUrl(resSettings.logo_light));
                 if (resSettings.logo_dark) setLogoPreviewDark(getLogoUrl(resSettings.logo_dark));
             } catch (err) {
@@ -49,7 +50,7 @@ const AdminSettings = () => {
             const { syncConfig } = await import("@/lib/api");
             syncConfig(updatedConfig);
             window.dispatchEvent(new Event("theme-loaded"));
-            toast.success("Configuration Updated", { description: "Changes synced instantly." });
+            toast.success("Configuration Updated", { description: "Changes synced instantly across platform." });
         } catch (err) {
             toast.error("Save Failed");
         } finally {
@@ -71,8 +72,9 @@ const AdminSettings = () => {
 
     if (loading) return (
         <AdminLayout>
-            <div className="flex items-center justify-center h-[60vh]">
-                <Loader2 className="animate-spin h-12 w-12 text-gold" />
+            <div className="flex flex-col items-center justify-center h-[60vh] gap-3">
+                <Loader2 className="animate-spin h-8 w-8 text-orange-500" />
+                <span className="text-xs font-medium text-slate-500">Loading system settings...</span>
             </div>
         </AdminLayout>
     );
@@ -80,84 +82,120 @@ const AdminSettings = () => {
     return (
         <AdminLayout>
             <div className="space-y-6 pb-20">
-                <div className="relative overflow-hidden bg-card/20 border border-border/40 rounded-xl p-5 backdrop-blur-md">
-                    <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-lg bg-gold/10 border border-gold/20 flex items-center justify-center">
-                                <Settings2 className="h-6 w-6 text-gold" />
-                            </div>
-                            <div>
-                                <h1 className="text-2xl font-bold text-foreground tracking-tight">System Config</h1>
-                                <p className="text-muted-foreground text-xs font-medium">Manage API Keys & Theming</p>
-                            </div>
+                {/* Header Banner */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200/80">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-2xl font-semibold text-[#10243e] tracking-tight">System Settings</h1>
+                            <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-200/70">
+                                Configuration
+                            </span>
                         </div>
-                        <Button onClick={handleSaveSettings} disabled={saving} variant="luxury" className="h-10 px-6 font-bold uppercase tracking-widest text-xs">
-                            {saving ? <Loader2 className="animate-spin h-3.5 w-3.5 mr-2" /> : <Save className="h-3.5 w-3.5 mr-2" />}
-                            Save Config
-                        </Button>
+                        <p className="text-xs text-slate-500 font-normal mt-0.5">
+                            Manage API keys, payment gateways, brand assets & business rules
+                        </p>
                     </div>
+                    <button
+                        onClick={handleSaveSettings}
+                        disabled={saving}
+                        className="h-10 px-5 text-xs font-semibold text-white bg-gradient-to-b from-[#ff8736] via-[#f97316] to-[#dc5c09] rounded-xl shadow-xs hover:brightness-105 active:scale-95 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
+                    >
+                        {saving ? (
+                            <Loader2 className="animate-spin h-3.5 w-3.5 mr-2" />
+                        ) : (
+                            <Save className="h-3.5 w-3.5 mr-2" />
+                        )}
+                        Save Changes
+                    </button>
                 </div>
 
+                {/* Tabs Container */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                    <TabsList className="bg-card/50 p-1 rounded-xl border border-border/30 h-14 w-full justify-start gap-2 overflow-x-auto no-scrollbar">
-                        <TabsTrigger value="general" className="h-10 px-6 rounded-lg data-[state=active]:bg-gold data-[state=active]:text-primary-foreground font-bold uppercase tracking-widest text-xs">General</TabsTrigger>
-                        <TabsTrigger value="apis" className="h-10 px-6 rounded-lg data-[state=active]:bg-gold data-[state=active]:text-primary-foreground font-bold uppercase tracking-widest text-xs">API Keys</TabsTrigger>
-                        <TabsTrigger value="payments" className="h-10 px-6 rounded-lg data-[state=active]:bg-gold data-[state=active]:text-primary-foreground font-bold uppercase tracking-widest text-xs">Payments</TabsTrigger>
-                        <TabsTrigger value="theme" className="h-10 px-6 rounded-lg data-[state=active]:bg-gold data-[state=active]:text-primary-foreground font-bold uppercase tracking-widest text-xs">Theme & Brand</TabsTrigger>
+                    <TabsList className="bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 h-auto w-full sm:w-auto inline-flex items-center justify-start gap-1 overflow-x-auto no-scrollbar shadow-xs">
+                        <TabsTrigger 
+                            value="general" 
+                            className="h-9 px-4 rounded-lg font-medium text-xs tracking-wide text-slate-600 hover:text-slate-900 data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:font-semibold data-[state=active]:shadow-xs border border-transparent data-[state=active]:border-slate-200/80 transition-all cursor-pointer"
+                        >
+                            General & Pricing
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="apis" 
+                            className="h-9 px-4 rounded-lg font-medium text-xs tracking-wide text-slate-600 hover:text-slate-900 data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:font-semibold data-[state=active]:shadow-xs border border-transparent data-[state=active]:border-slate-200/80 transition-all cursor-pointer"
+                        >
+                            API Integrations
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="payments" 
+                            className="h-9 px-4 rounded-lg font-medium text-xs tracking-wide text-slate-600 hover:text-slate-900 data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:font-semibold data-[state=active]:shadow-xs border border-transparent data-[state=active]:border-slate-200/80 transition-all cursor-pointer"
+                        >
+                            Payment Gateways
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="theme" 
+                            className="h-9 px-4 rounded-lg font-medium text-xs tracking-wide text-slate-600 hover:text-slate-900 data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:font-semibold data-[state=active]:shadow-xs border border-transparent data-[state=active]:border-slate-200/80 transition-all cursor-pointer"
+                        >
+                            Theme & Brand
+                        </TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="general" className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <Card className="border-border/50 bg-card/30 backdrop-blur-xl">
-                                <CardHeader>
-                                    <div className="flex items-center gap-2 mb-1 text-gold">
+                    {/* GENERAL TAB */}
+                    <TabsContent value="general" className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            {/* Pricing Strategy */}
+                            <div className="bg-gradient-to-b from-white via-[#fcfdff] to-[#f8fbff] border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-[0_2.5px_6px_rgba(0,0,0,0.03),inset_0_1px_0_rgba(255,255,255,1)] space-y-4">
+                                <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+                                    <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-[#ff8736] via-[#f97316] to-[#dc5c09] flex items-center justify-center text-white shadow-xs">
                                         <IndianRupee className="h-4 w-4" />
-                                        <CardTitle className="text-lg font-bold">Pricing Strategy</CardTitle>
                                     </div>
-                                    <CardDescription>Adjust plan pricing.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
+                                    <div>
+                                        <h3 className="text-base font-semibold text-[#10243e]">Plan Pricing Strategy</h3>
+                                        <p className="text-xs text-slate-500 font-normal">Live prices and strikeout discounts</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-3.5">
                                     {['Daily', 'Weekly', 'Monthly'].map((plan) => (
-                                        <div key={plan} className="grid grid-cols-2 gap-4">
+                                        <div key={plan} className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-slate-50/60 border border-slate-200/70">
                                             <div className="space-y-1">
-                                                <Label className="text-[10px] uppercase opacity-60">{plan} Price</Label>
+                                                <Label className="text-xs font-medium text-slate-600">{plan} Price (₹)</Label>
                                                 <Input
                                                     type="number"
                                                     value={settings[`price${plan}`] || ''}
                                                     onChange={(e) => setSettings({ ...settings, [`price${plan}`]: e.target.value })}
-                                                    className="bg-background/50 border-border/50 font-bold"
+                                                    className="bg-white border-slate-200 font-medium text-[#10243e] focus-visible:ring-2 focus-visible:ring-orange-500/20 focus-visible:border-orange-500"
                                                 />
                                             </div>
                                             <div className="space-y-1">
-                                                <Label className="text-[10px] uppercase opacity-60">Strike Price</Label>
+                                                <Label className="text-xs font-medium text-slate-400">Strike Price (₹)</Label>
                                                 <Input
                                                     type="number"
                                                     value={settings[`originalPrice${plan}`] || ''}
                                                     onChange={(e) => setSettings({ ...settings, [`originalPrice${plan}`]: e.target.value })}
-                                                    className="bg-background/20 border-border/20 text-muted-foreground"
+                                                    className="bg-white border-slate-200 text-slate-400 line-through focus-visible:ring-2 focus-visible:ring-orange-500/20 focus-visible:border-orange-500"
                                                 />
                                             </div>
                                         </div>
                                     ))}
-                                </CardContent>
-                            </Card>
+                                </div>
+                            </div>
 
-
-                            <Card className="border-border/50 bg-card/30 backdrop-blur-xl">
-                                <CardHeader>
-                                    <div className="flex items-center gap-2 mb-1 text-gold">
+                            {/* Automation & Controls */}
+                            <div className="bg-gradient-to-b from-white via-[#fcfdff] to-[#f8fbff] border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-[0_2.5px_6px_rgba(0,0,0,0.03),inset_0_1px_0_rgba(255,255,255,1)] space-y-4">
+                                <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+                                    <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-xs">
                                         <Zap className="h-4 w-4" />
-                                        <CardTitle className="text-lg font-bold">Process Automation</CardTitle>
                                     </div>
-                                    <CardDescription>Control AI generation and unlocking logic.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/20 border border-border/30">
-                                        <div className="flex items-center gap-3 text-gold">
-                                            <RefreshCcw className="h-4 w-4" />
-                                            <div className="text-foreground">
-                                                <Label className="font-bold">Allow Regeneration</Label>
-                                                <p className="text-[10px] text-muted-foreground">User can re-generate daily meals.</p>
+                                    <div>
+                                        <h3 className="text-base font-semibold text-[#10243e]">Process Automation</h3>
+                                        <p className="text-xs text-slate-500 font-normal">Plan generation and user unlock gates</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/70">
+                                        <div className="flex items-center gap-3">
+                                            <RefreshCcw className="h-4 w-4 text-orange-500" />
+                                            <div>
+                                                <Label className="text-xs font-medium text-[#10243e] cursor-pointer">Allow Plan Regeneration</Label>
+                                                <p className="text-xs text-slate-500">Subscribers can request meal regenerations</p>
                                             </div>
                                         </div>
                                         <Switch
@@ -166,12 +204,12 @@ const AdminSettings = () => {
                                         />
                                     </div>
 
-                                    <div className="flex items-center justify-between p-3 rounded-xl bg-secondary/20 border border-border/30">
-                                        <div className="flex items-center gap-3 text-gold">
-                                            <Zap className="h-4 w-4" />
-                                            <div className="text-foreground">
-                                                <Label className="font-bold">Enable Dummy Data</Label>
-                                                <p className="text-[10px] text-muted-foreground">Show "Test: Fill Data" buttons in Get Started.</p>
+                                    <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/70">
+                                        <div className="flex items-center gap-3">
+                                            <Zap className="h-4 w-4 text-orange-500" />
+                                            <div>
+                                                <Label className="text-xs font-medium text-[#10243e] cursor-pointer">Demo / Test Auto-fill</Label>
+                                                <p className="text-xs text-slate-500">Show sample data buttons during onboarding</p>
                                             </div>
                                         </div>
                                         <Switch
@@ -180,236 +218,282 @@ const AdminSettings = () => {
                                         />
                                     </div>
 
-                                    <div className="p-4 rounded-xl bg-secondary/10 border border-border/30 space-y-4">
-                                        <div className="flex items-center justify-between text-gold">
-                                            <Label className="font-bold text-foreground">Metabolic Lock (Timer)</Label>
+                                    <div className="p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/70 space-y-2.5">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <Label className="text-xs font-medium text-[#10243e] cursor-pointer">Metabolic Lock Delay</Label>
+                                                <p className="text-xs text-slate-500">Simulate nutritional calculation time</p>
+                                            </div>
                                             <Switch
                                                 checked={settings.enableGenerationTimer === "1"}
                                                 onCheckedChange={(c) => setSettings({ ...settings, enableGenerationTimer: c ? "1" : "0" })}
                                             />
                                         </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-1.5">
-                                                <Label className="text-[10px] font-bold uppercase opacity-60">Min Stall (Hrs)</Label>
+                                        <div className="grid grid-cols-2 gap-3 pt-1">
+                                            <div className="space-y-1">
+                                                <Label className="text-xs font-medium text-slate-500">Min Stall (Hrs)</Label>
                                                 <Input
                                                     type="number"
                                                     step="0.01"
                                                     value={settings.timerMinHours || ''}
                                                     onChange={(e) => setSettings({ ...settings, timerMinHours: e.target.value })}
-                                                    className="bg-background/30 border-border/50 font-bold h-8 text-xs font-mono"
+                                                    className="bg-white border-slate-200 font-mono font-medium text-xs text-[#10243e]"
                                                 />
                                             </div>
-                                            <div className="space-y-1.5">
-                                                <Label className="text-[10px] font-bold uppercase opacity-60">Max Stall (Hrs)</Label>
+                                            <div className="space-y-1">
+                                                <Label className="text-xs font-medium text-slate-500">Max Stall (Hrs)</Label>
                                                 <Input
                                                     type="number"
                                                     step="0.01"
                                                     value={settings.timerMaxHours || ''}
                                                     onChange={(e) => setSettings({ ...settings, timerMaxHours: e.target.value })}
-                                                    className="bg-background/30 border-border/50 font-bold h-8 text-xs font-mono"
+                                                    className="bg-white border-slate-200 font-mono font-medium text-xs text-[#10243e]"
                                                 />
                                             </div>
                                         </div>
                                     </div>
-                                </CardContent>
-                            </Card>
+                                </div>
+                            </div>
 
-                            <Card className="border-border/50 bg-card/30 backdrop-blur-xl">
-                                <CardHeader>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2 text-gold">
+                            {/* Limited Time Offer */}
+                            <div className="bg-gradient-to-b from-white via-[#fcfdff] to-[#f8fbff] border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-[0_2.5px_6px_rgba(0,0,0,0.03),inset_0_1px_0_rgba(255,255,255,1)] space-y-4">
+                                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-xs">
                                             <Timer className="h-4 w-4" />
-                                            <CardTitle className="text-lg font-bold">Limited Time Offer</CardTitle>
                                         </div>
-                                        <Switch
-                                            checked={settings.offerEnabled === "1"}
-                                            onCheckedChange={(c) => setSettings({ ...settings, offerEnabled: c ? "1" : "0" })}
-                                        />
+                                        <div>
+                                            <h3 className="text-base font-semibold text-[#10243e]">Limited Time Promotion</h3>
+                                            <p className="text-xs text-slate-500 font-normal">Countdown timer displayed on checkout</p>
+                                        </div>
                                     </div>
-                                    <CardDescription>Show countdown timer on pricing cards.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
+                                    <Switch
+                                        checked={settings.offerEnabled === "1"}
+                                        onCheckedChange={(c) => setSettings({ ...settings, offerEnabled: c ? "1" : "0" })}
+                                    />
+                                </div>
+                                <div className="space-y-3">
                                     <div className="space-y-1">
-                                        <Label className="text-[10px] uppercase opacity-60">Offer Start Date</Label>
+                                        <Label className="text-xs font-medium text-slate-600">Offer Start Date</Label>
                                         <Input
                                             type="datetime-local"
                                             value={settings.offerStartDate || ''}
                                             onChange={(e) => setSettings({ ...settings, offerStartDate: e.target.value })}
-                                            className="bg-background/50 border-border/50 font-bold"
+                                            className="bg-white border-slate-200 font-medium text-xs text-[#10243e]"
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <Label className="text-[10px] uppercase opacity-60">Duration (Days)</Label>
+                                        <Label className="text-xs font-medium text-slate-600">Duration (Days)</Label>
                                         <Input
                                             type="number"
                                             value={settings.offerDurationDays || ''}
                                             onChange={(e) => setSettings({ ...settings, offerDurationDays: e.target.value })}
-                                            className="bg-background/50 border-border/50 font-bold"
+                                            className="bg-white border-slate-200 font-medium text-xs text-[#10243e]"
                                         />
                                     </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="border-border/50 bg-card/30 backdrop-blur-xl">
-                                <CardHeader>
-                                    <div className="flex items-center gap-2 mb-1 text-gold">
-                                        <Smartphone className="h-4 w-4" />
-                                        <CardTitle className="text-lg font-bold">Mobile App Links</CardTitle>
-                                    </div>
-                                    <CardDescription>
-                                        Store URLs shown in the user sidebar. Leave blank to redirect users to the "Coming Soon" page instead.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-1.5">
-                                        <Label className="text-[10px] uppercase opacity-60">Google Play Store URL</Label>
-                                        <Input
-                                            type="url"
-                                            value={settings.play_store_url || ''}
-                                            onChange={(e) => setSettings({ ...settings, play_store_url: e.target.value })}
-                                            placeholder="https://play.google.com/store/apps/details?id=..."
-                                            className="bg-background/50 border-border/50 font-mono text-xs"
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <Label className="text-[10px] uppercase opacity-60">Apple App Store URL</Label>
-                                        <Input
-                                            type="url"
-                                            value={settings.app_store_url || ''}
-                                            onChange={(e) => setSettings({ ...settings, app_store_url: e.target.value })}
-                                            placeholder="https://apps.apple.com/in/app/..."
-                                            className="bg-background/50 border-border/50 font-mono text-xs"
-                                        />
-                                    </div>
-                                    <p className="text-[10px] text-muted-foreground italic">
-                                        Tip: Blank fields automatically route to <span className="text-gold">/coming-soon</span> until the app is live.
-                                    </p>
-                                </CardContent>
-                            </Card>
+                                </div>
+                            </div>
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="apis" className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
-                        <Card className="border-border/50 bg-card/30 backdrop-blur-xl">
-                            <CardHeader>
-                                <div className="flex items-center gap-2 text-gold">
-                                    <Key className="h-5 w-5" />
-                                    <CardTitle>API Integrations</CardTitle>
+                    {/* API KEYS TAB */}
+                    <TabsContent value="apis" className="space-y-6">
+                        <div className="bg-gradient-to-b from-white via-[#fcfdff] to-[#f8fbff] border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-[0_2.5px_6px_rgba(0,0,0,0.03),inset_0_1px_0_rgba(255,255,255,1)]">
+                            <div className="flex items-center gap-3 pb-3.5 mb-5 border-b border-slate-100">
+                                <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 flex items-center justify-center text-white shadow-xs">
+                                    <Key className="h-4 w-4" />
                                 </div>
-                                <CardDescription>Securely manage your third-party keys.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <Label>OpenAI API Key</Label>
-                                        <Input
-                                            type="password"
-                                            value={settings.openai_api_key || ''}
-                                            onChange={(e) => setSettings({ ...settings, openai_api_key: e.target.value })}
-                                            placeholder="sk-..."
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Gemini API Key</Label>
-                                        <Input
-                                            type="password"
-                                            value={settings.gemini_api_key || ''}
-                                            onChange={(e) => setSettings({ ...settings, gemini_api_key: e.target.value })}
-                                            placeholder="AIzaSy..."
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Google Client ID</Label>
-                                        <Input
-                                            value={settings.google_client_id || ''}
-                                            onChange={(e) => setSettings({ ...settings, google_client_id: e.target.value })}
-                                            placeholder="...apps.googleusercontent.com"
-                                        />
-                                    </div>
+                                <div>
+                                    <h3 className="text-base font-semibold text-[#10243e]">Third-Party API Credentials</h3>
+                                    <p className="text-xs text-slate-500 font-normal">Safely configure machine learning and OAuth credentials</p>
                                 </div>
-                            </CardContent>
-                        </Card>
-
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-medium text-slate-700">OpenAI API Secret Key</Label>
+                                    <Input
+                                        type="password"
+                                        value={settings.openai_api_key || ''}
+                                        onChange={(e) => setSettings({ ...settings, openai_api_key: e.target.value })}
+                                        placeholder="sk-..."
+                                        className="bg-white border-slate-200 font-mono text-xs text-[#10243e] focus-visible:ring-2 focus-visible:ring-orange-500/20 focus-visible:border-orange-500"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-medium text-slate-700">Google Gemini API Key</Label>
+                                    <Input
+                                        type="password"
+                                        value={settings.gemini_api_key || ''}
+                                        onChange={(e) => setSettings({ ...settings, gemini_api_key: e.target.value })}
+                                        placeholder="AIzaSy..."
+                                        className="bg-white border-slate-200 font-mono text-xs text-[#10243e] focus-visible:ring-2 focus-visible:ring-orange-500/20 focus-visible:border-orange-500"
+                                    />
+                                </div>
+                                <div className="space-y-1.5 md:col-span-2">
+                                    <Label className="text-xs font-medium text-slate-700">Google OAuth Client ID</Label>
+                                    <Input
+                                        value={settings.google_client_id || ''}
+                                        onChange={(e) => setSettings({ ...settings, google_client_id: e.target.value })}
+                                        placeholder="...apps.googleusercontent.com"
+                                        className="bg-white border-slate-200 font-mono text-xs text-[#10243e] focus-visible:ring-2 focus-visible:ring-orange-500/20 focus-visible:border-orange-500"
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </TabsContent>
 
-                    <TabsContent value="payments" className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
-                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                            <Card className={`border-border/50 bg-card/30 ${settings.enable_cashfree === "1" ? 'border-emerald-500/30' : ''}`}>
-                                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-lg">Cashfree</CardTitle>
+                    {/* PAYMENTS TAB */}
+                    <TabsContent value="payments" className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                            {/* Cashfree */}
+                            <div className={`bg-gradient-to-b from-white via-[#fcfdff] to-[#f8fbff] border ${settings.enable_cashfree === "1" ? 'border-emerald-300 ring-1 ring-emerald-300/40' : 'border-slate-200/90'} rounded-2xl p-5 shadow-[0_2.5px_6px_rgba(0,0,0,0.03),inset_0_1px_0_rgba(255,255,255,1)] space-y-3.5`}>
+                                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                                    <div>
+                                        <h4 className="font-semibold text-sm text-[#10243e]">Cashfree Payments</h4>
+                                        <p className="text-xs text-slate-400">Domestic UPI & Cards</p>
+                                    </div>
                                     <Switch
                                         checked={settings.enable_cashfree === "1"}
                                         onCheckedChange={(c) => setSettings({ ...settings, enable_cashfree: c ? "1" : "0" })}
                                     />
-                                </CardHeader>
-                                <CardContent className="space-y-3">
-                                    <Input value={settings.cashfree_app_id || ''} onChange={(e) => setSettings({ ...settings, cashfree_app_id: e.target.value })} placeholder="App ID" />
-                                    <Input type="password" value={settings.cashfree_secret_key || ''} onChange={(e) => setSettings({ ...settings, cashfree_secret_key: e.target.value })} placeholder="Secret Key" />
-                                </CardContent>
-                            </Card>
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs font-medium text-slate-600">App ID</Label>
+                                        <Input 
+                                            value={settings.cashfree_app_id || ''} 
+                                            onChange={(e) => setSettings({ ...settings, cashfree_app_id: e.target.value })} 
+                                            placeholder="App ID" 
+                                            className="bg-white border-slate-200 font-mono text-xs text-[#10243e]"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs font-medium text-slate-600">Secret Key</Label>
+                                        <Input 
+                                            type="password" 
+                                            value={settings.cashfree_secret_key || ''} 
+                                            onChange={(e) => setSettings({ ...settings, cashfree_secret_key: e.target.value })} 
+                                            placeholder="Secret Key" 
+                                            className="bg-white border-slate-200 font-mono text-xs text-[#10243e]"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
 
-                            <Card className={`border-border/50 bg-card/30 ${settings.enable_razorpay === "1" ? 'border-primary/30' : ''}`}>
-                                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-lg">Razorpay</CardTitle>
+                            {/* Razorpay */}
+                            <div className={`bg-gradient-to-b from-white via-[#fcfdff] to-[#f8fbff] border ${settings.enable_razorpay === "1" ? 'border-orange-300 ring-1 ring-orange-300/40' : 'border-slate-200/90'} rounded-2xl p-5 shadow-[0_2.5px_6px_rgba(0,0,0,0.03),inset_0_1px_0_rgba(255,255,255,1)] space-y-3.5`}>
+                                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                                    <div>
+                                        <h4 className="font-semibold text-sm text-[#10243e]">Razorpay</h4>
+                                        <p className="text-xs text-slate-400">Standard Gateway</p>
+                                    </div>
                                     <Switch
                                         checked={settings.enable_razorpay === "1"}
                                         onCheckedChange={(c) => setSettings({ ...settings, enable_razorpay: c ? "1" : "0" })}
                                     />
-                                </CardHeader>
-                                <CardContent className="space-y-3">
-                                    <Input value={settings.razorpay_key_id || ''} onChange={(e) => setSettings({ ...settings, razorpay_key_id: e.target.value })} placeholder="Key ID" />
-                                    <Input type="password" value={settings.razorpay_key_secret || ''} onChange={(e) => setSettings({ ...settings, razorpay_key_secret: e.target.value })} placeholder="Key Secret" />
-                                </CardContent>
-                            </Card>
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs font-medium text-slate-600">Key ID</Label>
+                                        <Input 
+                                            value={settings.razorpay_key_id || ''} 
+                                            onChange={(e) => setSettings({ ...settings, razorpay_key_id: e.target.value })} 
+                                            placeholder="rzp_live_..." 
+                                            className="bg-white border-slate-200 font-mono text-xs text-[#10243e]"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs font-medium text-slate-600">Key Secret</Label>
+                                        <Input 
+                                            type="password" 
+                                            value={settings.razorpay_key_secret || ''} 
+                                            onChange={(e) => setSettings({ ...settings, razorpay_key_secret: e.target.value })} 
+                                            placeholder="Key Secret" 
+                                            className="bg-white border-slate-200 font-mono text-xs text-[#10243e]"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
 
-                            <Card className={`border-border/50 bg-card/30 ${settings.enable_paypal === "1" ? 'border-blue-500/30' : ''}`}>
-                                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-lg">PayPal</CardTitle>
+                            {/* PayPal */}
+                            <div className={`bg-gradient-to-b from-white via-[#fcfdff] to-[#f8fbff] border ${settings.enable_paypal === "1" ? 'border-blue-300 ring-1 ring-blue-300/40' : 'border-slate-200/90'} rounded-2xl p-5 shadow-[0_2.5px_6px_rgba(0,0,0,0.03),inset_0_1px_0_rgba(255,255,255,1)] space-y-3.5`}>
+                                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                                    <div>
+                                        <h4 className="font-semibold text-sm text-[#10243e]">PayPal</h4>
+                                        <p className="text-xs text-slate-400">International Currency</p>
+                                    </div>
                                     <Switch
                                         checked={settings.enable_paypal === "1"}
                                         onCheckedChange={(c) => setSettings({ ...settings, enable_paypal: c ? "1" : "0" })}
                                     />
-                                </CardHeader>
-                                <CardContent className="space-y-3">
-                                    <Input value={settings.paypal_client_id || ''} onChange={(e) => setSettings({ ...settings, paypal_client_id: e.target.value })} placeholder="Client ID" />
-                                    <Input type="password" value={settings.paypal_client_secret || ''} onChange={(e) => setSettings({ ...settings, paypal_client_secret: e.target.value })} placeholder="Client Secret" />
-                                </CardContent>
-                            </Card>
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs font-medium text-slate-600">Client ID</Label>
+                                        <Input 
+                                            value={settings.paypal_client_id || ''} 
+                                            onChange={(e) => setSettings({ ...settings, paypal_client_id: e.target.value })} 
+                                            placeholder="Client ID" 
+                                            className="bg-white border-slate-200 font-mono text-xs text-[#10243e]"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs font-medium text-slate-600">Client Secret</Label>
+                                        <Input 
+                                            type="password" 
+                                            value={settings.paypal_client_secret || ''} 
+                                            onChange={(e) => setSettings({ ...settings, paypal_client_secret: e.target.value })} 
+                                            placeholder="Client Secret" 
+                                            className="bg-white border-slate-200 font-mono text-xs text-[#10243e]"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="theme" className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
-                        <Card className="border-border/50 bg-card/30 backdrop-blur-xl">
-                            <CardHeader>
-                                <div className="flex items-center gap-2 text-gold">
-                                    <Palette className="h-5 w-5" />
-                                    <CardTitle>Branding & Appearance</CardTitle>
+                    {/* THEME & BRAND TAB */}
+                    <TabsContent value="theme" className="space-y-6">
+                        <div className="bg-gradient-to-b from-white via-[#fcfdff] to-[#f8fbff] border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-[0_2.5px_6px_rgba(0,0,0,0.03),inset_0_1px_0_rgba(255,255,255,1)] space-y-5">
+                            <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+                                <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-pink-500 to-rose-600 flex items-center justify-center text-white shadow-xs">
+                                    <Palette className="h-4 w-4" />
                                 </div>
-                                <CardDescription>Customize colors and logos.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-8">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="space-y-4">
-                                        <Label className="font-bold uppercase text-[10px] tracking-widest text-gold">Light Mode Logo</Label>
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-16 w-16 rounded-lg bg-white border border-border/20 flex items-center justify-center overflow-hidden">
-                                                {logoPreviewLight ? <img src={logoPreviewLight} className="max-h-full max-w-full object-contain" /> : <ImageIcon className="text-muted-foreground/30 h-8 w-8" />}
-                                            </div>
-                                            <Input type="file" accept="image/*" onChange={(e) => handleLogoUpload(e, 'light')} className="text-xs" />
+                                <div>
+                                    <h3 className="text-base font-semibold text-[#10243e]">Branding & Visual Assets</h3>
+                                    <p className="text-xs text-slate-500 font-normal">Upload primary logo variations for light and dark contexts</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2.5 p-4 rounded-xl bg-slate-50/60 border border-slate-200/70">
+                                    <Label className="font-medium text-xs text-slate-600">Light Mode Logo</Label>
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-16 w-16 rounded-xl bg-white border border-slate-200 shadow-xs flex items-center justify-center overflow-hidden p-1">
+                                            {logoPreviewLight ? (
+                                                <img src={logoPreviewLight} className="max-h-full max-w-full object-contain" alt="Light logo preview" />
+                                            ) : (
+                                                <ImageIcon className="text-slate-300 h-7 w-7" />
+                                            )}
                                         </div>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <Label className="font-bold uppercase text-[10px] tracking-widest text-gold">Dark Mode Logo</Label>
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-16 w-16 rounded-lg bg-slate-900 border border-border/20 flex items-center justify-center overflow-hidden">
-                                                {logoPreviewDark ? <img src={logoPreviewDark} className="max-h-full max-w-full object-contain" /> : <ImageIcon className="text-muted-foreground/30 h-8 w-8" />}
-                                            </div>
-                                            <Input type="file" accept="image/*" onChange={(e) => handleLogoUpload(e, 'dark')} className="text-xs" />
-                                        </div>
+                                        <Input type="file" accept="image/*" onChange={(e) => handleLogoUpload(e, 'light')} className="text-xs bg-white border-slate-200 cursor-pointer" />
                                     </div>
                                 </div>
-                            </CardContent>
-                        </Card>
+
+                                <div className="space-y-2.5 p-4 rounded-xl bg-slate-50/60 border border-slate-200/70">
+                                    <Label className="font-medium text-xs text-slate-600">Dark Mode Logo</Label>
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-16 w-16 rounded-xl bg-slate-900 border border-slate-700 shadow-xs flex items-center justify-center overflow-hidden p-1">
+                                            {logoPreviewDark ? (
+                                                <img src={logoPreviewDark} className="max-h-full max-w-full object-contain" alt="Dark logo preview" />
+                                            ) : (
+                                                <ImageIcon className="text-slate-500 h-7 w-7" />
+                                            )}
+                                        </div>
+                                        <Input type="file" accept="image/*" onChange={(e) => handleLogoUpload(e, 'dark')} className="text-xs bg-white border-slate-200 cursor-pointer" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </TabsContent>
                 </Tabs>
             </div>

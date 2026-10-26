@@ -2,17 +2,13 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/modules/admin/components/AdminLayout";
 import { api } from "@/lib/api";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
-    UserCircle, Edit, Save, X, Activity, TrendingUp, Flame, Loader2,
-    Calendar, Mail, Phone, User, Scale, Ruler, Target, Dumbbell, Search, Filter, SortAsc, Crown, Download, FileText, CheckCircle2, Trash2, MoreHorizontal, Clock
+    UserCircle, Edit, Trash2, Loader2,
+    Mail, Target, Search, Crown, Download, Clock, X
 } from "lucide-react";
 import {
     Select,
@@ -21,13 +17,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
 
 const AdminUserProfiles = () => {
     const [profiles, setProfiles] = useState<any[]>([]);
@@ -37,11 +26,6 @@ const AdminUserProfiles = () => {
     const [goalFilter, setGoalFilter] = useState("all");
     const [planFilter, setPlanFilter] = useState("all");
     const [sortBy, setSortBy] = useState("name_asc");
-
-    const [selectedProfile, setSelectedProfile] = useState<any>(null);
-    const [editingProfile, setEditingProfile] = useState<any>(null);
-    const [healthMetrics, setHealthMetrics] = useState<any>(null);
-    const [saving, setSaving] = useState(false);
     const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
     const [deleting, setDeleting] = useState(false);
     const navigate = useNavigate();
@@ -119,34 +103,25 @@ const AdminUserProfiles = () => {
         ];
 
         const rows = filteredProfiles.map(p => {
-            let ext: any = {};
-            if (p.extended_data) {
-                try {
-                    ext = typeof p.extended_data === 'string' ? JSON.parse(p.extended_data) : p.extended_data;
-                    if (ext.formData) ext = { ...ext, ...ext.formData };
-                } catch (e) { console.error(e); }
-            }
-            
+            const ext = p.extended_data || {};
             const joinArr = (val: any) => Array.isArray(val) ? val.join("; ") : (val || "");
 
             return [
-                p.name,
-                p.email,
+                p.name || "",
+                p.email || "",
                 p.phone || "",
-                p.age,
-                p.gender,
-                p.height,
-                p.weight,
-                p.goal,
-                p.active_plan,
-
+                p.age || "",
+                p.gender || "",
+                p.height || "",
+                p.weight || "",
+                p.goal || "",
+                p.active_plan || "Trial",
                 ext.city || "",
                 ext.occupation || "",
                 ext.workingHours || "",
                 ext.maritalStatus || "",
                 ext.children || "",
                 ext.livingSituation || "",
-
                 joinArr(ext.primaryFitnessGoals),
                 joinArr(ext.hormonalGoals),
                 joinArr(ext.hormonalMaleSpecific),
@@ -155,7 +130,6 @@ const AdminUserProfiles = () => {
                 ext.targetTimeline || "",
                 ext.expectedWeight || "",
                 ext.motivationLevel || "",
-
                 joinArr(ext.lifestyleMetabolic),
                 joinArr(ext.digestiveHealth),
                 ext.digestiveHealthOverall || "",
@@ -166,7 +140,6 @@ const AdminUserProfiles = () => {
                 joinArr(ext.periodSymptoms),
                 ext.pcos || "",
                 ext.pregnancyStatus || "",
-
                 joinArr(ext.currentSupplements),
                 ext.pastSurgeries || "",
                 ext.alcoholConsumption || "",
@@ -178,7 +151,6 @@ const AdminUserProfiles = () => {
                 ext.dailyMovementLevel || "",
                 ext.stressLevel || "",
                 ext.waterIntake || "",
-
                 ext.currentlyExercise || "",
                 joinArr(ext.exerciseTypes),
                 ext.exerciseFrequency || "",
@@ -189,7 +161,6 @@ const AdminUserProfiles = () => {
                 ext.teaCoffeeIntake || "",
                 ext.outsideFood || "",
                 ext.spiceTolerance || "",
-
                 ext.breakfastTime || "",
                 ext.midMorningSnackTime || "",
                 ext.lunchTime || "",
@@ -276,8 +247,9 @@ const AdminUserProfiles = () => {
 
     if (loading && profiles.length === 0) return (
         <AdminLayout>
-            <div className="flex items-center justify-center h-[60vh]">
-                <Loader2 className="animate-spin h-12 w-12 text-gold" />
+            <div className="flex flex-col items-center justify-center h-[60vh] gap-3">
+                <Loader2 className="animate-spin h-8 w-8 text-orange-500" />
+                <span className="text-xs font-semibold text-slate-500">Loading user profiles...</span>
             </div>
         </AdminLayout>
     );
@@ -285,71 +257,81 @@ const AdminUserProfiles = () => {
     return (
         <AdminLayout>
             <div className="space-y-6 pb-20">
-                <div className="relative overflow-hidden bg-card/20 border border-border/40 rounded-xl p-5 backdrop-blur-md">
-                    <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-lg bg-gold/10 border border-gold/20 flex items-center justify-center">
-                                <UserCircle className="h-6 w-6 text-gold" />
-                            </div>
-                            <div>
-                                <h1 className="text-2xl font-bold text-foreground tracking-tight">Profile Editor</h1>
-                                <p className="text-muted-foreground text-xs font-medium">Fine-tune health metrics</p>
-                            </div>
+                {/* Header Banner */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200/80">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-2xl font-semibold text-[#10243e] tracking-tight">Health Profiles</h1>
+                            <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-md bg-orange-50 text-orange-700 border border-orange-200/80">
+                                Detailed Records
+                            </span>
                         </div>
-
-                        <div className="flex items-center gap-4">
-                            {selectedProfiles.length > 0 && (
-                                <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    className="h-10 mr-2 bg-red-500 hover:bg-red-600 text-white font-bold uppercase tracking-widest text-[10px]"
-                                    onClick={handleBulkDelete}
-                                    disabled={deleting}
-                                >
-                                    {deleting ? (
-                                        <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                                    ) : (
-                                        <Trash2 className="h-3.5 w-3.5 mr-1" />
-                                    )}
-                                    Delete ({selectedProfiles.length})
-                                </Button>
-                            )}
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-10 border-gold/30 bg-gold/5 text-gold hover:bg-gold hover:text-primary-foreground font-bold uppercase tracking-widest text-[10px]"
-                                onClick={exportToCSV}
-                            >
-                                <Download className="h-3.5 w-3.5 mr-1" /> Export CSV
-                            </Button>
-                            <div className="px-4 py-1 text-center font-bold bg-background/20 rounded-lg border border-border/30">
-                                <p className="text-[9px] font-bold uppercase text-gold tracking-widest mb-0.5">Total Profiles</p>
-                                <p className="text-2xl font-black text-foreground">{profiles.length}</p>
-                            </div>
-                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                            Inspect comprehensive biometric data, medical history and dietary habits
+                        </p>
                     </div>
 
-                    <div className="relative mt-5 flex flex-col md:flex-row gap-3">
-                        <div className="relative flex-1 group">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-gold transition-colors" />
+                    <div className="flex items-center gap-3">
+                        {selectedProfiles.length > 0 && (
+                            <button
+                                onClick={handleBulkDelete}
+                                disabled={deleting}
+                                className="h-9 px-3.5 text-xs font-medium text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-xs transition-all flex items-center cursor-pointer disabled:opacity-50"
+                            >
+                                {deleting ? (
+                                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                ) : (
+                                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                                )}
+                                Delete ({selectedProfiles.length})
+                            </button>
+                        )}
+                        <button
+                            onClick={exportToCSV}
+                            className="h-9 px-3.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 shadow-xs transition-all flex items-center cursor-pointer"
+                        >
+                            <Download className="h-3.5 w-3.5 mr-1.5 text-orange-500" />
+                            Export CSV
+                        </button>
+                        <div className="px-3.5 py-1 text-center bg-white border border-slate-200/90 rounded-xl shadow-xs">
+                            <p className="text-[10px] font-medium uppercase text-slate-400 tracking-wider">Total Profiles</p>
+                            <p className="text-lg font-semibold tabular-nums text-[#10243e] leading-tight">{profiles.length}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Filter Toolbar */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
+                    <div className="flex flex-col md:flex-row gap-3">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                             <Input
-                                placeholder="Search profiles..."
-                                className="w-full pl-9 bg-background/40 border-border/40 h-10 rounded-lg focus:ring-0 focus:border-gold/50 transition-all shadow-sm text-sm"
+                                placeholder="Search by name or email..."
+                                className="pl-10 pr-9 h-9 bg-slate-50/70 border-slate-200 text-xs font-normal text-[#10243e] rounded-xl focus-visible:ring-orange-500"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
+                            {searchTerm && (
+                                <button
+                                    onClick={() => setSearchTerm("")}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                                    title="Clear search"
+                                >
+                                    <X className="h-3.5 w-3.5" />
+                                </button>
+                            )}
                         </div>
 
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap items-center gap-2.5">
                             <Select value={goalFilter} onValueChange={setGoalFilter}>
-                                <SelectTrigger className="w-[130px] bg-background/40 border-border/40 h-10 rounded-lg text-sm">
-                                    <div className="flex items-center gap-2">
-                                        <Target className="h-3.5 w-3.5 text-gold/70" />
+                                <SelectTrigger className="w-[140px] bg-slate-50/70 border-slate-200 h-9 rounded-xl text-xs font-medium text-[#10243e]">
+                                    <div className="flex items-center gap-1.5">
+                                        <Target className="h-3.5 w-3.5 text-orange-500" />
                                         <SelectValue placeholder="Goal" />
                                     </div>
                                 </SelectTrigger>
-                                <SelectContent className="bg-background border-border/40">
-                                    <SelectItem value="all">Goals</SelectItem>
+                                <SelectContent className="bg-white border-slate-200">
+                                    <SelectItem value="all">All Goals</SelectItem>
                                     <SelectItem value="Weight Loss">Weight Loss</SelectItem>
                                     <SelectItem value="Muscle Gain">Muscle Gain</SelectItem>
                                     <SelectItem value="Maintenance">Maintenance</SelectItem>
@@ -357,135 +339,151 @@ const AdminUserProfiles = () => {
                             </Select>
 
                             <Select value={planFilter} onValueChange={setPlanFilter}>
-                                <SelectTrigger className="w-[110px] bg-background/40 border-border/40 h-10 rounded-lg text-sm">
-                                    <div className="flex items-center gap-2">
-                                        <Crown className="h-3.5 w-3.5 text-gold/70" />
+                                <SelectTrigger className="w-[130px] bg-slate-50/70 border-slate-200 h-9 rounded-xl text-xs font-medium text-[#10243e]">
+                                    <div className="flex items-center gap-1.5">
+                                        <Crown className="h-3.5 w-3.5 text-orange-500" />
                                         <SelectValue placeholder="Plan" />
                                     </div>
                                 </SelectTrigger>
-                                <SelectContent className="bg-background border-border/40">
-                                    <SelectItem value="all">Plans</SelectItem>
+                                <SelectContent className="bg-white border-slate-200">
+                                    <SelectItem value="all">All Plans</SelectItem>
                                     <SelectItem value="paid">Paid</SelectItem>
                                     <SelectItem value="free">Trial</SelectItem>
                                 </SelectContent>
                             </Select>
 
                             <Select value={sortBy} onValueChange={setSortBy}>
-                                <SelectTrigger className="w-[140px] bg-background/40 border-border/40 h-10 rounded-lg text-sm">
-                                    <div className="flex items-center gap-2">
-                                        <SortAsc className="h-3.5 w-3.5 text-gold/70" />
-                                        <SelectValue placeholder="Sort" />
-                                    </div>
+                                <SelectTrigger className="w-[140px] bg-slate-50/70 border-slate-200 h-9 rounded-xl text-xs font-medium text-[#10243e]">
+                                    <SelectValue placeholder="Sort" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-background border-border/40">
+                                <SelectContent className="bg-white border-slate-200">
                                     <SelectItem value="name_asc">Name A-Z</SelectItem>
+                                    <SelectItem value="name_desc">Name Z-A</SelectItem>
                                     <SelectItem value="age_high">Highest Age</SelectItem>
+                                    <SelectItem value="age_low">Lowest Age</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
                     </div>
+
+                    <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                        <span>Showing <strong className="font-semibold text-slate-700">{filteredProfiles.length}</strong> of {profiles.length} health profiles</span>
+                        {(searchTerm || goalFilter !== "all" || planFilter !== "all") && (
+                            <button
+                                onClick={() => {
+                                    setSearchTerm("");
+                                    setGoalFilter("all");
+                                    setPlanFilter("all");
+                                }}
+                                className="text-orange-600 hover:text-orange-700 font-medium text-xs cursor-pointer"
+                            >
+                                Reset filters
+                            </button>
+                        )}
+                    </div>
                 </div>
 
-                <Card className="border-border/40 bg-card/20 rounded-xl overflow-hidden shadow-none">
-                    <CardContent className="p-0">
-                        <Table>
-                            <TableHeader className="bg-secondary/20">
-                                <TableRow>
-                                    <TableHead className="w-12">
+                {/* Profiles Table */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr className="bg-slate-50 border-b border-slate-200/80 text-[11px] font-medium text-slate-500 tracking-wider uppercase">
+                                    <th className="py-3 px-4 w-12">
                                         <Checkbox
                                             checked={selectedProfiles.length === filteredProfiles.length && filteredProfiles.length > 0}
                                             onCheckedChange={selectAllProfiles}
-                                            className="border-gold/50 data-[state=checked]:bg-gold data-[state=checked]:border-gold"
+                                            className="border-slate-300 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
                                         />
-                                    </TableHead>
-                                    <TableHead className="font-bold">User</TableHead>
-                                    <TableHead className="font-bold text-center">Age/Gender</TableHead>
-                                    <TableHead className="font-bold text-center">Height/Weight</TableHead>
-                                    <TableHead className="font-bold text-center">Goal</TableHead>
-                                    <TableHead className="font-bold text-center">Plan</TableHead>
-                                    <TableHead className="font-bold text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredProfiles.map((profile) => (
-                                    <TableRow key={profile.id} className="group hover:bg-gold/5 transition-colors border-border/50">
-                                        <TableCell className="w-12">
-                                            <Checkbox
-                                                checked={selectedProfiles.includes(profile.id)}
-                                                onCheckedChange={() => toggleProfileSelection(profile.id)}
-                                                className="border-gold/50 data-[state=checked]:bg-gold data-[state=checked]:border-gold"
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-gold/20 text-gold border border-gold/30 flex items-center justify-center font-bold text-lg">
-                                                    {profile.name.charAt(0)}
-                                                </div>
-                                                <div>
-                                                    <div className="font-bold text-foreground group-hover:text-gold transition-colors">
-                                                        {profile.name}
+                                    </th>
+                                    <th className="py-3 px-4">User</th>
+                                    <th className="py-3 px-4 text-center">Age / Gender</th>
+                                    <th className="py-3 px-4 text-center">Height / Weight</th>
+                                    <th className="py-3 px-4 text-center">Primary Goal</th>
+                                    <th className="py-3 px-4 text-center">Plan</th>
+                                    <th className="py-3 px-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {filteredProfiles.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7} className="py-12 text-center text-slate-400 font-medium text-xs">
+                                            No health profiles match your filter criteria.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredProfiles.map((profile) => (
+                                        <tr key={profile.id} className="hover:bg-slate-50/70 transition-colors">
+                                            <td className="py-3.5 px-4 w-12">
+                                                <Checkbox
+                                                    checked={selectedProfiles.includes(profile.id)}
+                                                    onCheckedChange={() => toggleProfileSelection(profile.id)}
+                                                    className="border-slate-300 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                                                />
+                                            </td>
+                                            <td className="py-3.5 px-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-200/80 text-orange-600 flex items-center justify-center font-semibold text-sm shadow-xs">
+                                                        {profile.name ? profile.name.charAt(0).toUpperCase() : "U"}
                                                     </div>
-                                                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium lowercase italic">
-                                                        <Mail className="h-2 w-2" /> {profile.email}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            <div className="text-sm font-bold">{profile.age} yrs</div>
-                                            <div className="text-[10px] text-muted-foreground uppercase">{profile.gender}</div>
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            <div className="text-sm font-bold">{profile.height} cm</div>
-                                            <div className="text-[10px] text-muted-foreground">{profile.weight} kg</div>
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-500 border border-blue-500/20">
-                                                {profile.goal}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            {profile.active_plan && profile.active_plan !== "Trial" ? (
-                                                <div className="flex flex-col items-center">
-                                                    <div className="flex items-center gap-1 text-[10px] font-black text-foreground uppercase tracking-tighter bg-gold/10 px-2 py-0.5 rounded border border-gold/20">
-                                                        <Crown className="h-3 w-3 text-gold" /> {profile.active_plan}
+                                                    <div>
+                                                        <div className="font-medium text-[#10243e]">
+                                                            {profile.name}
+                                                        </div>
+                                                        <div className="flex items-center gap-1 text-[11px] text-slate-400 font-normal">
+                                                            <Mail className="h-3 w-3" /> {profile.email}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            ) : (
-                                                <div className="flex flex-col items-center">
-                                                    <div className="flex items-center gap-1 text-[10px] font-black text-orange-500 uppercase tracking-tighter bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">
-                                                        <Clock className="h-3 w-3 text-orange-500" /> Trial
-                                                    </div>
+                                            </td>
+                                            <td className="py-3.5 px-4 text-center">
+                                                <div className="font-medium text-[#10243e]">{profile.age} yrs</div>
+                                                <div className="text-[10px] font-normal text-slate-400 uppercase">{profile.gender}</div>
+                                            </td>
+                                            <td className="py-3.5 px-4 text-center">
+                                                <div className="font-medium text-[#10243e]">{profile.height} cm</div>
+                                                <div className="text-[10px] font-normal text-slate-400">{profile.weight} kg</div>
+                                            </td>
+                                            <td className="py-3.5 px-4 text-center">
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200/80">
+                                                    {profile.goal || "General"}
+                                                </span>
+                                            </td>
+                                            <td className="py-3.5 px-4 text-center">
+                                                {profile.active_plan && profile.active_plan !== "Trial" ? (
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                                                        <Crown className="h-3 w-3 text-emerald-600" /> {profile.active_plan}
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200/80">
+                                                        <Clock className="h-3 w-3 text-amber-600" /> Trial
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="py-3.5 px-4 text-right">
+                                                <div className="flex items-center justify-end gap-1.5">
+                                                    <button
+                                                        onClick={() => handleEditProfile(profile)}
+                                                        className="px-2.5 py-1 text-[11px] font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-orange-600 transition-colors flex items-center gap-1 cursor-pointer"
+                                                    >
+                                                        <Edit className="h-3 w-3" /> Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteProfile(profile.id)}
+                                                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                                        title="Delete profile"
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </button>
                                                 </div>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex items-center gap-1">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleEditProfile(profile)}
-                                                    className="h-8 px-3 text-xs font-bold uppercase tracking-widest hover:bg-gold/10 hover:text-gold"
-                                                >
-                                                    <Edit className="h-3 w-3 mr-1" />
-                                                    Edit
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleDeleteProfile(profile.id)}
-                                                    className="h-8 px-3 text-xs font-bold uppercase tracking-widest hover:bg-red-500/10 hover:text-red-500 text-red-400"
-                                                >
-                                                    <Trash2 className="h-3 w-3" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </AdminLayout>
     );

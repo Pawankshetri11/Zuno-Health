@@ -11,28 +11,44 @@ export const syncConfig = (newConfig: any) => {
     window.dispatchEvent(new Event("config-updated"));
 };
 
-// Anti-Caching Helpers
+// ─── Fast In-Memory API Cache ────────────────────────────────────────────────
+// Caches read-only GET requests for 45 seconds so tab navigation is instant (0ms).
+// Automatically invalidated whenever a write/mutation occurs.
+interface CacheEntry {
+    data: any;
+    timestamp: number;
+}
+const apiCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 45000; // 45 seconds cache TTL
+
+export const clearApiCache = (pattern?: string) => {
+    if (!pattern) {
+        apiCache.clear();
+    } else {
+        for (const key of apiCache.keys()) {
+            if (key.includes(pattern)) {
+                apiCache.delete(key);
+            }
+        }
+    }
+};
+
+// Request Headers Helper
 const getHeaders = (extraHeaders = {}) => ({
     "Content-Type": "application/json",
-    "Cache-Control": "no-cache, no-store, must-revalidate",
-    "Pragma": "no-cache",
-    "Expires": "0",
     ...extraHeaders
 });
 
-const getUrl = (url: string) => {
+const getUrl = (url: string, bustCache = false) => {
+    if (!bustCache) return url;
     const separator = url.includes("?") ? "&" : "?";
     return `${url}${separator}_t=${Date.now()}`;
 };
-
-// Feature Flags
-// These will be updated by syncConfig
 
 export const getLogoUrl = (logoPath: string | File) => {
     if (!logoPath) return "";
     if (typeof logoPath !== "string") return URL.createObjectURL(logoPath);
     if (logoPath.startsWith("http") || logoPath.startsWith("data:")) return logoPath;
-    // Remove leading slash if exists
     const cleanPath = logoPath.startsWith("/") ? logoPath.substring(1) : logoPath;
     return `${API_BASE_URL}/../${cleanPath}`;
 };
@@ -46,9 +62,11 @@ interface User {
 }
 
 export const api = {
+    clearCache: clearApiCache,
+
     auth: {
         signup: async (email: string, password: string, name: string) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/auth.php?action=signup`), {
+            const response = await fetch(getUrl(`${API_BASE_URL}/auth.php?action=signup`, true), {
                 method: "POST",
                 headers: getHeaders(),
                 body: JSON.stringify({ email, password, data: { name } }),
@@ -60,7 +78,7 @@ export const api = {
             return response.json();
         },
         login: async (email: string, password: string) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/auth.php?action=login`), {
+            const response = await fetch(getUrl(`${API_BASE_URL}/auth.php?action=login`, true), {
                 method: "POST",
                 headers: getHeaders(),
                 body: JSON.stringify({ email, password }),
@@ -72,7 +90,7 @@ export const api = {
             return response.json();
         },
         googleLogin: async (credential: string) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/auth.php?action=verify_google`), {
+            const response = await fetch(getUrl(`${API_BASE_URL}/auth.php?action=verify_google`, true), {
                 method: "POST",
                 headers: getHeaders(),
                 body: JSON.stringify({ credential }),
@@ -84,7 +102,7 @@ export const api = {
             return response.json();
         },
         googleLoginManual: async (userInfo: unknown) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/auth.php?action=verify_google_manual`), {
+            const response = await fetch(getUrl(`${API_BASE_URL}/auth.php?action=verify_google_manual`, true), {
                 method: "POST",
                 headers: getHeaders(),
                 body: JSON.stringify(userInfo),
@@ -103,15 +121,13 @@ export const api = {
             gateway: "cashfree" | "razorpay" = "cashfree",
             extras: { coupon_code?: string; plan_type?: string } = {}
         ) => {
-            // Cashfree PROD requires HTTPS; sandbox + localhost dev work over HTTP.
-            // Only force https for real (non-localhost) origins.
             let returnUrl = `${window.location.origin}/dashboard?order_id={order_id}`;
             const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)/i.test(returnUrl);
             if (returnUrl.startsWith("http:") && !isLocalhost) {
                 returnUrl = returnUrl.replace("http:", "https:");
             }
 
-            const response = await fetch(getUrl(`${API_BASE_URL}/payment.php?action=create_order`), {
+            const response = await fetch(getUrl(`${API_BASE_URL}/payment.php?action=create_order`, true), {
                 method: "POST",
                 headers: getHeaders(),
                 body: JSON.stringify({
@@ -130,22 +146,27 @@ export const api = {
                 const error = await response.json();
                 throw new Error(error.message || error.error || "Payment initiation failed");
             }
+            clearApiCache("subscriptions");
             return response.json();
         },
         verifyOrder: async (orderId: string) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/payment.php?action=verify`), {
+            const response = await fetch(getUrl(`${API_BASE_URL}/payment.php?action=verify`, true), {
                 method: "POST",
                 headers: getHeaders(),
                 body: JSON.stringify({ gateway: "cashfree", order_id: orderId }),
             });
+            clearApiCache("subscriptions");
+            clearApiCache("admin");
             return response.json();
         },
         verifyRazorpay: async (payload: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/payment.php?action=verify`), {
+            const response = await fetch(getUrl(`${API_BASE_URL}/payment.php?action=verify`, true), {
                 method: "POST",
                 headers: getHeaders(),
                 body: JSON.stringify({ gateway: "razorpay", ...payload }),
             });
+            clearApiCache("subscriptions");
+            clearApiCache("admin");
             return response.json();
         }
     },
@@ -156,6 +177,8 @@ export const api = {
                 headers: getHeaders(),
                 body: JSON.stringify(profileData),
             });
+            clearApiCache("profiles");
+            clearApiCache("admin");
             if (!response.ok) {
                 const text = await response.text();
                 let errMsg = "Failed to process request";
@@ -170,8 +193,16 @@ export const api = {
             try { return text ? JSON.parse(text) : null; }
             catch(e) { throw new Error("Invalid response format"); }
         },
-        getByUserId: async (userId: string) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/profiles.php?user_id=${userId}`), {
+        getByUserId: async (userId: string, force = false) => {
+            const url = `${API_BASE_URL}/profiles.php?user_id=${userId}`;
+            if (!force) {
+                const cached = apiCache.get(url);
+                if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+                    return cached.data;
+                }
+            }
+
+            const response = await fetch(url, {
                 method: "GET",
                 headers: getHeaders(),
             });
@@ -189,7 +220,9 @@ export const api = {
             }
             const text = await response.text();
             try {
-                return text ? JSON.parse(text) : null;
+                const data = text ? JSON.parse(text) : null;
+                apiCache.set(url, { data, timestamp: Date.now() });
+                return data;
             } catch (e) {
                 console.error("Invalid JSON from profiles:", text);
                 throw new Error("Server returned invalid JSON");
@@ -201,6 +234,8 @@ export const api = {
                 headers: getHeaders(),
                 body: JSON.stringify({ action: 'update', user_id: userId, ...data })
             });
+            clearApiCache("profiles");
+            clearApiCache("admin");
             return response.json();
         }
     },
@@ -211,6 +246,8 @@ export const api = {
                 headers: getHeaders(),
                 body: JSON.stringify(subscriptionData),
             });
+            clearApiCache("subscriptions");
+            clearApiCache("admin");
             if (!response.ok) {
                 const error = await response.json();
                 throw new Error(error.message || error.error || "Failed to create subscription");
@@ -223,14 +260,24 @@ export const api = {
                 headers: getHeaders(),
                 body: JSON.stringify(data),
             });
+            clearApiCache("subscriptions");
+            clearApiCache("admin");
             if (!response.ok) {
                 const error = await response.json();
                 throw new Error(error.message || error.error || "Failed to update subscription");
             }
             return response.json();
         },
-        getActiveByUserId: async (userId: string) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/subscriptions.php?user_id=${userId}`), {
+        getActiveByUserId: async (userId: string, force = false) => {
+            const url = `${API_BASE_URL}/subscriptions.php?user_id=${userId}`;
+            if (!force) {
+                const cached = apiCache.get(url);
+                if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+                    return cached.data;
+                }
+            }
+
+            const response = await fetch(url, {
                 method: "GET",
                 headers: getHeaders(),
             });
@@ -239,8 +286,6 @@ export const api = {
             }
             if (!response.ok) {
                 const text = await response.text();
-                // If 404, it might just mean no subscription, which isn't an "error" for the caller?
-                // But existing logic seemed to treat it as error. Let's keep throwing but safe parse.
                 let errorMessage = "Failed to fetch subscription";
                 try {
                     const error = JSON.parse(text);
@@ -250,21 +295,33 @@ export const api = {
             }
             const text = await response.text();
             try {
-                return text ? JSON.parse(text) : null;
+                const data = text ? JSON.parse(text) : null;
+                apiCache.set(url, { data, timestamp: Date.now() });
+                return data;
             } catch (e) {
                 console.error("Invalid JSON from subscriptions:", text);
                 throw new Error("Server returned invalid JSON for subscription");
             }
         },
-        getAllByUserId: async (userId: string) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/subscriptions.php?user_id=${userId}&all=true`), {
+        getAllByUserId: async (userId: string, force = false) => {
+            const url = `${API_BASE_URL}/subscriptions.php?user_id=${userId}&all=true`;
+            if (!force) {
+                const cached = apiCache.get(url);
+                if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+                    return cached.data;
+                }
+            }
+
+            const response = await fetch(url, {
                 method: "GET",
                 headers: getHeaders(),
             });
             if (!response.ok) {
                 return [];
             }
-            return response.json();
+            const data = await response.json();
+            apiCache.set(url, { data, timestamp: Date.now() });
+            return data;
         },
         previewChange: async (userId: string, newPlan: string) => {
             const r = await fetch(getUrl(`${API_BASE_URL}/subscriptions.php?action=preview_change&user_id=${userId}&new_plan=${encodeURIComponent(newPlan)}`), {
@@ -280,14 +337,23 @@ export const api = {
                 headers: getHeaders(),
                 body: JSON.stringify(plans),
             });
+            clearApiCache("daily_diet_plans");
             if (!response.ok) {
                 const error = await response.json();
                 throw new Error(error.message || error.error || "Failed to create diet plans");
             }
             return response.json();
         },
-        getBySubscription: async (subscriptionId: string) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/daily_diet_plans.php?subscription_id=${subscriptionId}`), {
+        getBySubscription: async (subscriptionId: string, force = false) => {
+            const url = `${API_BASE_URL}/daily_diet_plans.php?subscription_id=${subscriptionId}`;
+            if (!force) {
+                const cached = apiCache.get(url);
+                if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+                    return cached.data;
+                }
+            }
+
+            const response = await fetch(url, {
                 method: "GET",
                 headers: getHeaders(),
             });
@@ -302,7 +368,9 @@ export const api = {
             }
             const text = await response.text();
             try {
-                return text ? JSON.parse(text) : [];
+                const data = text ? JSON.parse(text) : [];
+                apiCache.set(url, { data, timestamp: Date.now() });
+                return data;
             } catch (e) {
                 console.error("Invalid JSON from diet plans:", text);
                 throw new Error("Server returned invalid JSON for diet plans");
@@ -318,6 +386,7 @@ export const api = {
                     meal_plan: mealPlan
                 }),
             });
+            clearApiCache("daily_diet_plans");
             if (!response.ok) {
                 const error = await response.json();
                 throw new Error(error.message || error.error || "Failed to update plan status");
@@ -330,13 +399,14 @@ export const api = {
                 headers: getHeaders(),
                 body: JSON.stringify({
                     userProfile,
-                    dayNumber, // Note: using dayNumber instead of day_number to match PHP
+                    dayNumber,
                     planType,
                     language,
                     notes,
                     subscription_id: subscriptionId
                 }),
             });
+            clearApiCache("daily_diet_plans");
             if (!response.ok) {
                 const text = await response.text();
                 console.error("[Diet API] Backend Error Output:", text);
@@ -344,7 +414,7 @@ export const api = {
                     const error = JSON.parse(text);
                     throw new Error(error.message || error.error || "Failed to generate plan");
                 } catch(e) {
-                    throw new Error("Server Error: " + text.substring(0, 100)); // Surface raw PHP error to frontend
+                    throw new Error("Server Error: " + text.substring(0, 100));
                 }
             }
             return response.json();
@@ -355,6 +425,7 @@ export const api = {
                 headers: getHeaders(),
                 body: JSON.stringify(data),
             });
+            clearApiCache("daily_diet_plans");
             if (!response.ok) {
                 const error = await response.json();
                 throw new Error(error.message || error.error || "Check-in failed");
@@ -373,6 +444,7 @@ export const api = {
                 headers: getHeaders(),
                 body: JSON.stringify({ action: "substitute_meal", ...data }),
             });
+            clearApiCache("daily_diet_plans");
             if (!response.ok) {
                 const text = await response.text();
                 try {
@@ -388,7 +460,7 @@ export const api = {
     timers: {
         get: async (subscriptionId: string, dayNumber: number) => {
             try {
-                const response = await fetch(getUrl(`${API_BASE_URL}/timers.php?subscription_id=${subscriptionId}&day_number=${dayNumber}`), {
+                const response = await fetch(`${API_BASE_URL}/timers.php?subscription_id=${subscriptionId}&day_number=${dayNumber}`, {
                     headers: getHeaders()
                 });
                 if (!response.ok) {
@@ -403,7 +475,7 @@ export const api = {
             }
         },
         create: async (subscriptionId: string, dayNumber: number, unlockAt: number) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/timers.php`), {
+            const response = await fetch(`${API_BASE_URL}/timers.php`, {
                 method: "POST",
                 headers: getHeaders(),
                 body: JSON.stringify({ subscription_id: subscriptionId, day_number: dayNumber, unlock_at: unlockAt })
@@ -414,83 +486,133 @@ export const api = {
             }
         },
         delete: async (subscriptionId: string, dayNumber: number) => {
-            await fetch(getUrl(`${API_BASE_URL}/timers.php?subscription_id=${subscriptionId}&day_number=${dayNumber}`), {
+            await fetch(`${API_BASE_URL}/timers.php?subscription_id=${subscriptionId}&day_number=${dayNumber}`, {
                 method: "DELETE",
                 headers: getHeaders()
             });
         }
     },
     admin: {
-        getAnalytics: async (adminId: string) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/admin/analytics.php?admin_id=${adminId}`), {
-                headers: getHeaders()
-            });
-            return response.json();
+        getAnalytics: async (adminId: string, force = false) => {
+            const url = `${API_BASE_URL}/admin/analytics.php?admin_id=${adminId}`;
+            if (!force) {
+                const cached = apiCache.get(url);
+                if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+                    return cached.data;
+                }
+            }
+            const response = await fetch(url, { headers: getHeaders() });
+            const data = await response.json();
+            apiCache.set(url, { data, timestamp: Date.now() });
+            return data;
         },
-        getUsers: async (adminId: string) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/admin/users.php?admin_id=${adminId}`), {
-                headers: getHeaders()
-            });
-            return response.json();
+        getUsers: async (adminId: string, force = false) => {
+            const url = `${API_BASE_URL}/admin/users.php?admin_id=${adminId}`;
+            if (!force) {
+                const cached = apiCache.get(url);
+                if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+                    return cached.data;
+                }
+            }
+            const response = await fetch(url, { headers: getHeaders() });
+            const data = await response.json();
+            apiCache.set(url, { data, timestamp: Date.now() });
+            return data;
         },
         changeUserPlan: async (adminId: string, userId: string, planType: "daily" | "weekly" | "monthly") => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/admin/users.php?admin_id=${adminId}&action=change_plan`), {
+            const response = await fetch(`${API_BASE_URL}/admin/users.php?admin_id=${adminId}&action=change_plan`, {
                 method: "POST",
                 headers: getHeaders(),
                 body: JSON.stringify({ user_id: userId, plan_type: planType })
             });
+            clearApiCache("admin");
+            clearApiCache("subscriptions");
+            clearApiCache("daily_diet_plans");
             if (!response.ok) {
                 const error = await response.json();
                 throw new Error(error.message || error.error || "Failed to change user plan");
             }
             return response.json();
         },
-        getUserProfiles: async (adminId: string) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/admin/profiles.php?admin_id=${adminId}`), {
-                headers: getHeaders()
-            });
-            return response.json();
+        getUserProfiles: async (adminId: string, force = false) => {
+            const url = `${API_BASE_URL}/admin/profiles.php?admin_id=${adminId}`;
+            if (!force) {
+                const cached = apiCache.get(url);
+                if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+                    return cached.data;
+                }
+            }
+            const response = await fetch(url, { headers: getHeaders() });
+            const data = await response.json();
+            apiCache.set(url, { data, timestamp: Date.now() });
+            return data;
         },
-        getUserProfile: async (adminId: string, profileId: string) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/admin/profiles.php?admin_id=${adminId}&id=${profileId}`), {
-                headers: getHeaders()
-            });
-            return response.json();
+        getUserProfile: async (adminId: string, profileId: string, force = false) => {
+            const url = `${API_BASE_URL}/admin/profiles.php?admin_id=${adminId}&id=${profileId}`;
+            if (!force) {
+                const cached = apiCache.get(url);
+                if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+                    return cached.data;
+                }
+            }
+            const response = await fetch(url, { headers: getHeaders() });
+            const data = await response.json();
+            apiCache.set(url, { data, timestamp: Date.now() });
+            return data;
         },
         updateUserProfile: async (adminId: string, profileId: string, data: any) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/admin/profiles.php`), {
+            const response = await fetch(`${API_BASE_URL}/admin/profiles.php`, {
                 method: "PATCH",
                 headers: getHeaders(),
                 body: JSON.stringify({ admin_id: adminId, id: profileId, ...data })
             });
+            clearApiCache("admin/profiles");
+            clearApiCache("profiles");
             return response.json();
         },
         deleteUserProfile: async (adminId: string, profileId: string) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/admin/profiles.php?admin_id=${adminId}&id=${profileId}`), {
+            const response = await fetch(`${API_BASE_URL}/admin/profiles.php?admin_id=${adminId}&id=${profileId}`, {
                 method: "DELETE",
                 headers: getHeaders()
             });
+            clearApiCache("admin");
+            clearApiCache("profiles");
             return response.json();
         },
-        getHealthMetrics: async (adminId: string, profileId: string) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/admin/health_metrics.php?admin_id=${adminId}&profile_id=${profileId}`), {
-                headers: getHeaders()
-            });
-            return response.json();
+        getHealthMetrics: async (adminId: string, profileId: string, force = false) => {
+            const url = `${API_BASE_URL}/admin/health_metrics.php?admin_id=${adminId}&profile_id=${profileId}`;
+            if (!force) {
+                const cached = apiCache.get(url);
+                if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+                    return cached.data;
+                }
+            }
+            const response = await fetch(url, { headers: getHeaders() });
+            const data = await response.json();
+            apiCache.set(url, { data, timestamp: Date.now() });
+            return data;
         },
         updateHealthMetrics: async (adminId: string, profileId: string, data: any) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/admin/health_metrics.php`), {
+            const response = await fetch(`${API_BASE_URL}/admin/health_metrics.php`, {
                 method: "POST",
                 headers: getHeaders(),
                 body: JSON.stringify({ admin_id: adminId, profile_id: profileId, ...data })
             });
+            clearApiCache("admin/health_metrics");
             return response.json();
         },
-        getSettings: async (adminId: string) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/admin/settings.php?admin_id=${adminId}`), {
-                headers: getHeaders()
-            });
-            return response.json();
+        getSettings: async (adminId: string, force = false) => {
+            const url = `${API_BASE_URL}/admin/settings.php?admin_id=${adminId}`;
+            if (!force) {
+                const cached = apiCache.get(url);
+                if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+                    return cached.data;
+                }
+            }
+            const response = await fetch(url, { headers: getHeaders() });
+            const data = await response.json();
+            apiCache.set(url, { data, timestamp: Date.now() });
+            return data;
         },
         updateSettings: async (adminId: string, settings: any) => {
             const formData = new FormData();
@@ -502,46 +624,64 @@ export const api = {
                 }
             });
 
-            const response = await fetch(getUrl(`${API_BASE_URL}/admin/settings.php`), {
-                method: "POST",
-                body: formData // Note: browser sets multipart/form-data for FormData
-            });
-            return response.json();
-        },
-        getWithdrawals: async (adminId: string) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/admin/withdrawals.php?admin_id=${adminId}`), {
-                headers: getHeaders()
-            });
-            return response.json();
-        },
-        processWithdrawal: async (adminId: string, formData: FormData) => {
-            formData.append('admin_id', adminId);
-            const response = await fetch(getUrl(`${API_BASE_URL}/admin/withdrawals.php`), {
+            const response = await fetch(`${API_BASE_URL}/admin/settings.php`, {
                 method: "POST",
                 body: formData
             });
+            clearApiCache("settings");
             return response.json();
         },
-        getPage: async (slug: string) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/admin/cms.php?slug=${slug}`), {
-                headers: getHeaders()
+        getWithdrawals: async (adminId: string, force = false) => {
+            const url = `${API_BASE_URL}/admin/withdrawals.php?admin_id=${adminId}`;
+            if (!force) {
+                const cached = apiCache.get(url);
+                if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+                    return cached.data;
+                }
+            }
+            const response = await fetch(url, { headers: getHeaders() });
+            const data = await response.json();
+            apiCache.set(url, { data, timestamp: Date.now() });
+            return data;
+        },
+        processWithdrawal: async (adminId: string, formData: FormData) => {
+            formData.append('admin_id', adminId);
+            const response = await fetch(`${API_BASE_URL}/admin/withdrawals.php`, {
+                method: "POST",
+                body: formData
             });
+            clearApiCache("admin");
             return response.json();
+        },
+        getPage: async (slug: string, force = false) => {
+            const url = `${API_BASE_URL}/admin/cms.php?slug=${slug}`;
+            if (!force) {
+                const cached = apiCache.get(url);
+                if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+                    return cached.data;
+                }
+            }
+            const response = await fetch(url, { headers: getHeaders() });
+            const data = await response.json();
+            apiCache.set(url, { data, timestamp: Date.now() });
+            return data;
         },
         savePage: async (adminId: string, pageData: any) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/admin/cms.php`), {
+            const response = await fetch(`${API_BASE_URL}/admin/cms.php`, {
                 method: "POST",
                 headers: getHeaders(),
                 body: JSON.stringify({ admin_id: adminId, ...pageData })
             });
+            clearApiCache("cms");
             return response.json();
         },
         adjustBalance: async (adminId: string, userId: string, amount: number, type: 'add' | 'remove', description: string) => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/admin/adjust_balance.php`), {
+            const response = await fetch(`${API_BASE_URL}/admin/adjust_balance.php`, {
                 method: "POST",
                 headers: getHeaders(),
                 body: JSON.stringify({ admin_id: adminId, user_id: userId, amount, type, description })
             });
+            clearApiCache("admin");
             if (!response.ok) {
                 const error = await response.json();
                 throw new Error(error.message || error.error || "Failed to adjust balance");
@@ -549,52 +689,84 @@ export const api = {
             return response.json();
         },
         coupons: {
-            list: async (adminId: string) => {
-                const r = await fetch(getUrl(`${API_BASE_URL}/admin/coupons.php?admin_id=${adminId}`), { headers: getHeaders() });
-                return r.json();
+            list: async (adminId: string, force = false) => {
+                const url = `${API_BASE_URL}/admin/coupons.php?admin_id=${adminId}`;
+                if (!force) {
+                    const cached = apiCache.get(url);
+                    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+                        return cached.data;
+                    }
+                }
+                const r = await fetch(url, { headers: getHeaders() });
+                const data = await r.json();
+                apiCache.set(url, { data, timestamp: Date.now() });
+                return data;
             },
             create: async (adminId: string, data: any) => {
-                const r = await fetch(getUrl(`${API_BASE_URL}/admin/coupons.php`), {
+                const r = await fetch(`${API_BASE_URL}/admin/coupons.php`, {
                     method: "POST",
                     headers: getHeaders(),
                     body: JSON.stringify({ admin_id: adminId, ...data }),
                 });
+                clearApiCache("coupons");
                 if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed to create coupon"); }
                 return r.json();
             },
             update: async (adminId: string, id: number | string, data: any) => {
-                const r = await fetch(getUrl(`${API_BASE_URL}/admin/coupons.php?id=${id}`), {
+                const r = await fetch(`${API_BASE_URL}/admin/coupons.php?id=${id}`, {
                     method: "PATCH",
                     headers: getHeaders(),
                     body: JSON.stringify({ admin_id: adminId, ...data }),
                 });
+                clearApiCache("coupons");
                 if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Failed to update coupon"); }
                 return r.json();
             },
             remove: async (adminId: string, id: number | string) => {
-                const r = await fetch(getUrl(`${API_BASE_URL}/admin/coupons.php?admin_id=${adminId}&id=${id}`), {
+                const r = await fetch(`${API_BASE_URL}/admin/coupons.php?admin_id=${adminId}&id=${id}`, {
                     method: "DELETE",
                     headers: getHeaders(),
                 });
+                clearApiCache("coupons");
                 return r.json();
             },
-            analytics: async (adminId: string) => {
-                const r = await fetch(getUrl(`${API_BASE_URL}/admin/coupons.php?action=analytics&admin_id=${adminId}`), { headers: getHeaders() });
-                return r.json();
+            analytics: async (adminId: string, force = false) => {
+                const url = `${API_BASE_URL}/admin/coupons.php?action=analytics&admin_id=${adminId}`;
+                if (!force) {
+                    const cached = apiCache.get(url);
+                    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+                        return cached.data;
+                    }
+                }
+                const r = await fetch(url, { headers: getHeaders() });
+                const data = await r.json();
+                apiCache.set(url, { data, timestamp: Date.now() });
+                return data;
             },
         },
         transactions: {
-            list: async (adminId: string, opts: { status?: string; gateway?: string; q?: string } = {}) => {
+            list: async (adminId: string, opts: { status?: string; gateway?: string; q?: string } = {}, force = false) => {
                 const qs = new URLSearchParams({ admin_id: adminId, ...(opts as any) }).toString();
-                const r = await fetch(getUrl(`${API_BASE_URL}/admin/transactions.php?${qs}`), { headers: getHeaders() });
-                return r.json();
+                const url = `${API_BASE_URL}/admin/transactions.php?${qs}`;
+                if (!force) {
+                    const cached = apiCache.get(url);
+                    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+                        return cached.data;
+                    }
+                }
+                const r = await fetch(url, { headers: getHeaders() });
+                const data = await r.json();
+                apiCache.set(url, { data, timestamp: Date.now() });
+                return data;
             },
             updateStatus: async (adminId: string, payload: { id: number | string; payment_status: string; transaction_id?: string; admin_note?: string }) => {
-                const r = await fetch(getUrl(`${API_BASE_URL}/admin/transactions.php?admin_id=${adminId}`), {
+                const r = await fetch(`${API_BASE_URL}/admin/transactions.php?admin_id=${adminId}`, {
                     method: "PATCH",
                     headers: getHeaders(),
                     body: JSON.stringify({ admin_id: adminId, ...payload }),
                 });
+                clearApiCache("admin");
+                clearApiCache("subscriptions");
                 if (!r.ok) { const e = await r.json(); throw new Error(e.error || "Update failed"); }
                 return r.json();
             },
@@ -602,7 +774,7 @@ export const api = {
     },
     coupons: {
         validate: async (code: string, plan_type: string, amount: number) => {
-            const r = await fetch(getUrl(`${API_BASE_URL}/coupons.php?action=validate`), {
+            const r = await fetch(`${API_BASE_URL}/coupons.php?action=validate`, {
                 method: "POST",
                 headers: getHeaders(),
                 body: JSON.stringify({ code, plan_type, amount }),
@@ -611,11 +783,18 @@ export const api = {
         }
     },
     config: {
-        fetchPublic: async () => {
-            const response = await fetch(getUrl(`${API_BASE_URL}/settings_public.php`), {
-                headers: getHeaders()
-            });
-            return response.json();
+        fetchPublic: async (force = false) => {
+            const url = `${API_BASE_URL}/settings_public.php`;
+            if (!force) {
+                const cached = apiCache.get(url);
+                if (cached && Date.now() - cached.timestamp < 120000) {
+                    return cached.data;
+                }
+            }
+            const response = await fetch(url, { headers: getHeaders() });
+            const data = await response.json();
+            apiCache.set(url, { data, timestamp: Date.now() });
+            return data;
         }
     },
 };

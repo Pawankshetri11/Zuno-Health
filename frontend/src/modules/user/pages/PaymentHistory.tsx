@@ -10,8 +10,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { api, getLogoUrl } from "@/lib/api";
 
 const PaymentHistory = () => {
-    const [payments, setPayments] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [payments, setPayments] = useState<any[]>(() => {
+        try { return JSON.parse(sessionStorage.getItem("zuno_user_payments") || "[]"); } catch { return []; }
+    });
+    const [loading, setLoading] = useState(() => !sessionStorage.getItem("zuno_user_payments"));
     
     const user = JSON.parse(localStorage.getItem("zuno_auth_user") || "{}");
     const settings = JSON.parse(window.localStorage.getItem("app_public_settings") || "{}");
@@ -22,6 +24,7 @@ const PaymentHistory = () => {
             try {
                 const res = await api.subscriptions.getAllByUserId(user.id);
                 setPayments(res);
+                sessionStorage.setItem("zuno_user_payments", JSON.stringify(res));
             } catch (err) {
                 console.error(err);
             } finally {
