@@ -8,7 +8,6 @@ const navLinks = [
   { label: "Meal Plans", to: "/#meal-plans" },
   { label: "Workouts", to: "/#workouts" },
   { label: "Pricing", to: "/#pricing" },
-  { label: "Blog", to: "/coming-soon" },
 ];
 
 const navLinkClass =

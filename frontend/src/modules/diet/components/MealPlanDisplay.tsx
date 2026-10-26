@@ -180,7 +180,7 @@ export const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({
       <CardHeader>
         <CardTitle className="text-lg md:text-xl font-medium flex items-center gap-2 text-[#10243e] tracking-tight">
           {currentDayPlan.meal_plan.day_title ? (
-            <><Crown className="h-5 w-5 text-orange-500 shrink-0" />{currentDayPlan.meal_plan.day_title}</>
+            <><Crown className="h-5 w-5 text-orange-500 shrink-0" />{String(currentDayPlan.meal_plan.day_title).replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{2388}\u{200D}\u{FE0F}]/gu, "").trim()}</>
           ) : (
             <><Utensils className="h-4 w-4 text-orange-500 shrink-0" />Day {currentDayPlan.day_number} Meal Plan</>
           )}
@@ -190,19 +190,21 @@ export const MealPlanDisplay: React.FC<MealPlanDisplayProps> = ({
             <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
               <Target className="w-16 h-16 text-blue-600" />
             </div>
-            <h4 className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-3.5 flex items-center gap-2">
-              <div className="p-1 rounded-lg bg-blue-100/70 text-blue-600">
+            <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-3.5 flex items-center gap-2">
+              <div className="p-1 rounded-lg bg-blue-100 text-blue-700">
                 <Sparkles className="w-3.5 h-3.5" />
               </div>
               Strategic Day Objectives
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 relative z-10 font-medium">
               {currentDayPlan.meal_plan.daily_objectives.map((obj, i) => (
-                <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-white border border-slate-200/80 shadow-sm hover:border-blue-300 transition-all">
+                <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-white border border-slate-300/80 shadow-xs hover:border-blue-300 transition-all">
                    <div className="flex-shrink-0 w-4 h-4 rounded-full bg-blue-50 flex items-center justify-center border border-blue-200 mt-0.5">
                       <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
                    </div>
-                   <span className="text-xs text-slate-700 leading-relaxed">{String(obj)}</span>
+                   <span className="text-xs text-slate-800 font-medium leading-relaxed">
+                     {String(obj).replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{2388}\u{200D}\u{FE0F}]/gu, "").trim()}
+                   </span>
                 </div>
               ))}
             </div>

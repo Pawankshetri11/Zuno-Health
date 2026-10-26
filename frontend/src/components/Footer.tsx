@@ -7,7 +7,6 @@ const navLinks = [
   { label: "Meal Plans", to: "/#meal-plans" },
   { label: "Workouts", to: "/#workouts" },
   { label: "Pricing", to: "/#pricing" },
-  { label: "Blog", to: "/coming-soon" },
   { label: "Privacy", to: "/privacy-policy" },
   { label: "Terms", to: "/terms" },
   { label: "Contact", to: "/contact" },

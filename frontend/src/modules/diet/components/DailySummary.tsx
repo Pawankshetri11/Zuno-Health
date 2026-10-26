@@ -1,5 +1,5 @@
 import React from "react";
-import { Sparkles, Droplets, Target, TrendingDown, TrendingUp, Minus, Clock, Lightbulb } from "lucide-react";
+import { Sparkles, Droplets, Target, TrendingDown, TrendingUp, Minus, Clock, Lightbulb, CheckCircle2, XCircle } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { DayPlan, UserData } from "@/lib/types/dashboard";
 
@@ -254,33 +254,49 @@ export const DailySummary: React.FC<DailySummaryProps> = ({
 
         <div className="grid grid-cols-1 gap-4 pt-2">
           {meal_plan.daily_dos && (
-            <div className="p-4 rounded-xl bg-green-500/5 border border-green-500/10">
-              <h4 className="text-sm font-semibold text-green-500 mb-2 flex items-center gap-2">✅ Daily Do's</h4>
-              <ul className="text-xs space-y-1 text-muted-foreground">
-                {meal_plan.daily_dos.map((item, i) => <li key={i}>• {item}</li>)}
+            <div className="p-4 rounded-xl bg-emerald-50/80 border border-emerald-200/90 shadow-xs">
+              <h4 className="text-sm font-semibold text-emerald-800 mb-2.5 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Daily Do's</span>
+              </h4>
+              <ul className="text-xs space-y-1.5 text-slate-700 font-normal">
+                {meal_plan.daily_dos.map((item, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="text-emerald-600 mt-0.5 shrink-0">•</span>
+                    <span className="leading-relaxed">{String(item).replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{2388}\u{200D}\u{FE0F}]/gu, "").trim()}</span>
+                  </li>
+                ))}
               </ul>
             </div>
           )}
           {meal_plan.daily_donts && (
-            <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/10">
-              <h4 className="text-sm font-semibold text-red-500 mb-2 flex items-center gap-2">❌ Daily Don'ts</h4>
-              <ul className="text-xs space-y-1 text-muted-foreground">
-                {meal_plan.daily_donts.map((item, i) => <li key={i}>• {item}</li>)}
+            <div className="p-4 rounded-xl bg-rose-50/80 border border-rose-200/90 shadow-xs">
+              <h4 className="text-sm font-semibold text-rose-800 mb-2.5 flex items-center gap-2">
+                <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>Daily Don'ts</span>
+              </h4>
+              <ul className="text-xs space-y-1.5 text-slate-700 font-normal">
+                {meal_plan.daily_donts.map((item, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="text-rose-600 mt-0.5 shrink-0">•</span>
+                    <span className="leading-relaxed">{String(item).replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{2388}\u{200D}\u{FE0F}]/gu, "").trim()}</span>
+                  </li>
+                ))}
               </ul>
             </div>
           )}
         </div>
 
         {meal_plan.water_intake && (
-          <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 space-y-3">
+          <div className="p-4 rounded-xl bg-blue-50/80 border border-blue-200/90 shadow-xs space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-blue-400">
-                <Droplets className="h-5 w-5" />
+              <div className="flex items-center gap-2 text-blue-900">
+                <Droplets className="h-5 w-5 text-blue-600" />
                 <span className="font-semibold text-sm">Hydration Plan</span>
               </div>
               {/* Total liters badge */}
               {typeof meal_plan.water_intake === 'object' && (meal_plan.water_intake as any).total_liters && (
-                <span className="text-xs font-bold text-blue-300 bg-blue-500/20 px-2.5 py-0.5 rounded-full border border-blue-500/30">
+                <span className="text-xs font-bold text-blue-800 bg-blue-100/90 px-2.5 py-0.5 rounded-full border border-blue-200">
                   {(meal_plan.water_intake as any).total_liters}L / day
                 </span>
               )}
@@ -288,7 +304,9 @@ export const DailySummary: React.FC<DailySummaryProps> = ({
 
             {/* Old string format fallback */}
             {typeof meal_plan.water_intake === 'string' && (
-              <p className="text-xs text-muted-foreground">{meal_plan.water_intake}</p>
+              <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                {String(meal_plan.water_intake).replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{2388}\u{200D}\u{FE0F}]/gu, "").trim()}
+              </p>
             )}
 
             {/* New structured object format */}
@@ -296,15 +314,17 @@ export const DailySummary: React.FC<DailySummaryProps> = ({
               <>
                 {/* Schedule */}
                 {(meal_plan.water_intake as any).schedule?.length > 0 && (
-                  <div className="space-y-1">
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-blue-400/70 flex items-center gap-1">
-                      <Clock className="w-2.5 h-2.5" /> Intake Schedule
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-blue-800 flex items-center gap-1.5">
+                      <Clock className="w-3 h-3 text-blue-600" /> Intake Schedule
                     </p>
-                    <ul className="space-y-1">
+                    <ul className="space-y-1.5">
                       {(meal_plan.water_intake as any).schedule.map((s: string, i: number) => (
-                        <li key={i} className="text-[10px] text-blue-200/80 flex items-start gap-1.5">
-                          <span className="text-blue-400 mt-0.5 shrink-0">•</span>
-                          <span>{s}</span>
+                        <li key={i} className="text-xs text-slate-700 font-normal flex items-start gap-2">
+                          <span className="text-blue-600 mt-0.5 shrink-0">•</span>
+                          <span className="leading-relaxed">
+                            {String(s).replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{2388}\u{200D}\u{FE0F}]/gu, "").trim()}
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -313,15 +333,17 @@ export const DailySummary: React.FC<DailySummaryProps> = ({
 
                 {/* Tips */}
                 {(meal_plan.water_intake as any).tips?.length > 0 && (
-                  <div className="space-y-1 pt-1 border-t border-blue-500/10">
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-blue-400/70 flex items-center gap-1">
-                      <Lightbulb className="w-2.5 h-2.5" /> Hydration Tips
+                  <div className="space-y-1.5 pt-2 border-t border-blue-200/70">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-blue-800 flex items-center gap-1.5">
+                      <Lightbulb className="w-3 h-3 text-blue-600" /> Hydration Tips
                     </p>
-                    <ul className="space-y-1">
+                    <ul className="space-y-1.5">
                       {(meal_plan.water_intake as any).tips.map((t: string, i: number) => (
-                        <li key={i} className="text-[10px] text-muted-foreground flex items-start gap-1.5">
-                          <span className="text-blue-400 mt-0.5 shrink-0">✦</span>
-                          <span>{t}</span>
+                        <li key={i} className="text-xs text-slate-700 font-normal flex items-start gap-2">
+                          <span className="text-blue-500 mt-0.5 shrink-0">✦</span>
+                          <span className="leading-relaxed">
+                            {String(t).replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{2388}\u{200D}\u{FE0F}]/gu, "").trim()}
+                          </span>
                         </li>
                       ))}
                     </ul>

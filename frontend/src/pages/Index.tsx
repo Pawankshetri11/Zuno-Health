@@ -11,6 +11,7 @@ import {
   Droplets,
   Egg,
   FileText,
+  Flame,
   HeartPulse,
   Home,
   Lock,
@@ -24,6 +25,7 @@ import {
   User,
   UtensilsCrossed,
   Wallet,
+  Zap,
 } from "lucide-react";
 import {
   CartesianGrid,
@@ -37,10 +39,8 @@ import {
 import { useAppConfig } from "@/hooks/useAppConfig";
 import Footer from "@/components/Footer";
 import heroBanner from "@/assets/landing/hero-banner.png";
-import goalWeightLoss from "@/assets/landing/goal-weight-loss-cutout.png";
-import goalWeightGain from "@/assets/landing/goal-weight-gain-user.png";
-import goalLossIcon from "@/assets/landing/goal-loss-icon.png";
-import goalGainIcon from "@/assets/landing/goal-gain-icon.png";
+import goalWeightLoss from "@/assets/landing/goal-weight-loss-v2.png";
+import goalWeightGain from "@/assets/landing/goal-weight-gain-v2.png";
 import mealBreakfast from "@/assets/landing/meal-breakfast.png";
 import mealLunch from "@/assets/landing/meal-lunch.png";
 import mealSnacks from "@/assets/landing/meal-snacks.png";
@@ -134,69 +134,104 @@ const goals = [
     title: "Weight Loss",
     copy: "Reduce body fat with balanced Indian meals and simple workouts.",
     image: goalWeightLoss,
-    icon: goalLossIcon,
     accent: "sky" as const,
+    eyebrow: "BURN FAT  ·  STAY FIT  ·  FEEL LIGHTER",
+    benefits: [
+      { icon: UtensilsCrossed, label: "Balanced Indian Meals" },
+      { icon: Dumbbell, label: "Simple Workouts" },
+      { icon: HeartPulse, label: "Sustainable Results" },
+    ],
+    action: "Choose Weight Loss",
   },
   {
     title: "Weight Gain",
     copy: "Gain healthy weight and build muscle with high-calorie Indian meal plans.",
     image: goalWeightGain,
-    icon: goalGainIcon,
     accent: "orange" as const,
+    eyebrow: "BUILD MUSCLE  ·  GAIN WEIGHT  ·  GET STRONGER",
+    benefits: [
+      { icon: UtensilsCrossed, label: "High-Calorie Indian Meals" },
+      { icon: Dumbbell, label: "Muscle Building" },
+      { icon: Zap, label: "More Strength" },
+    ],
+    action: "Choose Weight Gain",
   },
 ];
 
 const accentStyles = {
   sky: {
-    card: "border-blue-200 bg-gradient-to-br from-[#edf6ff] to-[#f8fbff] shadow-[0_12px_30px_rgba(37,99,235,0.07)]",
-    icon: "bg-blue-600 text-white",
-    arrow: "bg-blue-600 text-white hover:bg-blue-700",
+    card: "border-blue-200/80 bg-gradient-to-br from-[#eef6ff] via-[#f8fbff] to-[#eaf3ff]",
+    tone: "text-blue-600",
+    pill: "border-blue-200 bg-blue-50/90 text-blue-800",
+    button: "bg-blue-600 hover:bg-blue-700 shadow-[0_10px_22px_rgba(37,99,235,0.2)]",
+    glow: "bg-blue-300/35",
   },
   orange: {
-    card: "border-orange-200 bg-gradient-to-br from-[#fff4ec] to-[#fffaf7] shadow-[0_12px_30px_rgba(249,115,22,0.08)]",
-    icon: "bg-orange-500 text-white",
-    arrow: "bg-orange-500 text-white hover:bg-orange-600",
+    card: "border-orange-200/80 bg-gradient-to-br from-[#fff5ed] via-[#fffaf7] to-[#fff0e5]",
+    tone: "text-orange-500",
+    pill: "border-orange-200 bg-orange-50/90 text-orange-800",
+    button: "bg-orange-500 hover:bg-orange-600 shadow-[0_10px_22px_rgba(249,115,22,0.2)]",
+    glow: "bg-orange-300/35",
   },
 };
 
 const GoalSection = () => {
   return (
-    <section id="goals" className="relative bg-white pb-10 pt-2 md:pb-12 md:pt-3">
-      <div className="mx-auto max-w-7xl px-5 md:px-8">
-        <div className="text-center" data-aos="fade-up">
-          <h2 className="text-3xl font-semibold tracking-tight text-[#10243e] md:text-4xl">
-            What's Your Goal?
+    <section id="goals" className="relative overflow-hidden bg-white py-12 sm:py-14 lg:py-16">
+      <div className="mx-auto max-w-[1600px] px-5 md:px-8">
+        <div className="mb-8 text-center sm:mb-10" data-aos="fade-up">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.34em] text-slate-500 sm:text-xs">Personalized for a healthier you</p>
+          <h2 className="text-3xl font-semibold tracking-tight text-[#10243e] sm:text-4xl lg:text-5xl">
+            What's Your <span className="text-blue-600">Goal</span><span className="text-orange-500">?</span>
           </h2>
-          <p className="mt-2 text-base text-slate-600">Choose your goal and get a personalized diet plan.</p>
+          <p className="mt-2 text-sm text-slate-600 sm:text-base">Choose your goal and get a personalized diet plan.</p>
+          <div className="mx-auto mt-4 flex w-20 overflow-hidden rounded-full">
+            <span className="h-[3px] w-1/2 bg-blue-500" />
+            <span className="h-[3px] w-1/2 bg-orange-400" />
+          </div>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2 md:gap-5">
+        <div className="grid gap-5 lg:grid-cols-2 lg:gap-6">
           {goals.map((goal) => {
             const s = accentStyles[goal.accent];
+            const isLoss = goal.accent === "sky";
             return (
               <Link
                 to="/auth"
                 key={goal.title}
                 data-aos="fade-up"
-                className={`group relative flex min-h-[210px] items-center overflow-hidden rounded-2xl border px-5 py-5 transition duration-300 hover:-translate-y-0.5 hover:shadow-lg sm:min-h-[228px] sm:px-7 ${s.card}`}
+                className={`group relative isolate flex min-h-[610px] overflow-hidden rounded-[28px] border transition duration-300 hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(15,35,65,0.12)] sm:min-h-[390px] lg:h-[390px] lg:min-h-0 ${s.card}`}
               >
+                <div aria-hidden="true" className={`pointer-events-none absolute -bottom-24 ${isLoss ? "-left-24" : "-right-24"} h-72 w-72 rounded-full ${s.glow} blur-3xl`} />
+                <div aria-hidden="true" className={`pointer-events-none absolute inset-y-0 ${isLoss ? "left-0" : "right-0"} w-[42%] opacity-70`} style={{ background: isLoss ? "linear-gradient(145deg, rgba(59,130,246,.20), transparent 70%)" : "linear-gradient(215deg, rgba(249,115,22,.20), transparent 70%)", clipPath: isLoss ? "polygon(0 0, 100% 20%, 70% 100%, 0 82%)" : "polygon(100% 0, 0 20%, 30% 100%, 100% 82%)" }} />
                 <img
                   src={goal.image}
-                  alt=""
-                  className="pointer-events-none absolute right-[2%] top-1/2 z-0 h-full max-h-full w-auto max-w-[90%] -translate-y-1/2 object-contain object-right"
+                  alt={isLoss ? "Athletic woman representing a weight-loss goal" : "Athletic man representing a healthy weight-gain goal"}
+                  className={`pointer-events-none absolute bottom-0 z-0 h-[250px] w-auto max-w-[58%] object-contain object-bottom sm:h-[104%] sm:max-w-[44%] lg:h-[106%] ${isLoss ? "left-0 lg:left-0" : "right-0 lg:right-0"}`}
                 />
-                <div className="relative z-10 flex w-[76%] items-center gap-3 sm:w-[68%] sm:gap-4">
-                  <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full ring-4 ring-white/70 sm:h-[72px] sm:w-[72px] ${s.icon}`}>
-                    <img src={goal.icon} alt="" className="h-8 w-8 object-contain sm:h-10 sm:w-10" />
+                <div className={`relative z-10 flex w-full flex-col px-6 pb-[260px] pt-7 sm:w-[61%] sm:px-0 sm:pb-7 sm:pt-7 lg:w-full lg:justify-center lg:py-7 ${isLoss ? "sm:ml-auto sm:pr-6 lg:ml-0 lg:pl-[39%] lg:pr-7" : "sm:pl-6 sm:pr-0 lg:pl-7 lg:pr-[39%]"}`}>
+                  <span className={`mb-3 inline-flex w-fit max-w-full items-center gap-1.5 rounded-full border px-3 py-1.5 text-[9px] font-semibold tracking-[0.12em] sm:text-[10px] ${s.pill}`}>
+                    {isLoss ? <Flame className="h-3.5 w-3.5 shrink-0" /> : <TrendingDown className="h-3.5 w-3.5 shrink-0 rotate-180" />}
+                    <span className="truncate">{goal.eyebrow}</span>
                   </span>
-                  <div className="max-w-[110px] md:max-w-[130px] xl:max-w-[230px]">
-                    <h3 className="text-lg font-medium leading-tight text-[#10243e] sm:text-xl">{goal.title}</h3>
-                    <p className="mt-2 text-xs font-normal leading-5 text-slate-700 sm:text-sm sm:leading-6">{goal.copy}</p>
+                  <h3 className="text-3xl font-semibold leading-tight tracking-tight text-[#10243e] sm:text-4xl">
+                    {isLoss ? <>Weight <span className={s.tone}>Loss</span></> : <>Weight <span className={s.tone}>Gain</span></>}
+                  </h3>
+                  <p className="mt-3 max-w-[370px] text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">{goal.copy}</p>
+                  <div className="mt-5 grid max-w-[390px] grid-cols-3 gap-2 sm:mt-6">
+                    {goal.benefits.map(({ icon: Icon, label }) => (
+                      <span key={label} className={`flex flex-col items-center gap-1 text-center text-[10px] font-medium leading-4 text-slate-600 sm:text-[11px] ${s.tone}`}>
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/75 ring-1 ring-white"><Icon className="h-4 w-4" /></span>
+                        <span className="text-slate-600">{label}</span>
+                      </span>
+                    ))}
                   </div>
+                  <span className={`mt-5 inline-flex h-12 w-full max-w-[340px] items-center justify-between rounded-full px-5 text-sm font-medium text-white transition duration-200 group-hover:gap-5 group-hover:brightness-105 sm:mt-6 sm:text-base ${s.button}`}>
+                    {goal.action}
+                    <ArrowRight className="h-5 w-5 shrink-0 transition-transform duration-200 group-hover:translate-x-1" />
+                  </span>
                 </div>
-                <span className={`absolute bottom-4 right-4 z-10 flex h-10 w-10 items-center justify-center rounded-full transition-transform duration-200 group-hover:translate-x-1 sm:bottom-5 sm:right-5 sm:h-12 sm:w-12 ${s.arrow}`}>
-                  <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6" />
-                </span>
+                <div aria-hidden="true" className={`pointer-events-none absolute bottom-0 ${isLoss ? "left-[27%]" : "right-[27%]"} h-px w-28 bg-gradient-to-r from-transparent ${isLoss ? "via-blue-300" : "via-orange-300"} to-transparent`} />
               </Link>
             );
           })}
